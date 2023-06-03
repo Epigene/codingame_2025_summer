@@ -1,5 +1,5 @@
 require "set"
-require 'benchmark'
+require "benchmark"
 
 STDOUT.sync = true # DO NOT REMOVE
 

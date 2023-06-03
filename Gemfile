@@ -1,7 +1,10 @@
 source "https://rubygems.org"
 
-# Specify your gem's dependencies in codinbot.gemspec
 gemspec
 
+ruby "3.2.2"
+
+gem "pry"
+gem "standard", "~> 1.28.0"
 gem "rake", "~> 12.0"
-gem "rspec", "~> 3.8"
+gem "rspec", "~> 3.9"

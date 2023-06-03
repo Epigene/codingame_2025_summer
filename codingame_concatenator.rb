@@ -11,14 +11,15 @@ concatenable_file_list_path = Pathname.new("./build_order.txt")
 output_path = Pathname.new("./codingame.rb")
 
 File.open(output_path, "w") do |file|
-  File.readlines(concatenable_file_list_path).each do |addable_file_path|
-    contents = File.read(Pathname.new("./#{ addable_file_path.chomp }"))
+  File.readlines(concatenable_file_list_path).each do |addable_file_line|
+    addable_file_name = addable_file_line.split("#").first.strip
+    contents = File.read(Pathname.new("./#{addable_file_name}"))
 
-    file.write("#{ contents }\n")
+    file.write("#{contents}\n")
   end
 end
 
 puts(
-  "Concatenated contents of files mentioned in #{ concatenable_file_list_path } "\
-  "into #{ output_path }"
+  "Concatenated contents of files mentioned in #{concatenable_file_list_path} " \
+  "into #{output_path}"
 )
