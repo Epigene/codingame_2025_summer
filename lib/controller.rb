@@ -17,11 +17,19 @@ class Controller
   attr_reader :surface_points, :landing_segment, :blocking_segments, :previous_lander_location
   attr_reader :visibility_graph
 
+  attr_accessor :current_lander_location, :path_to_landing
+  # LEGACY aka "I see landing strip, going for it"
+  attr_accessor :path_to_landing
+
+  # MODERN, an array of nodes omitting lander's location which should be visited.
+  attr_accessor :nodes_to_landing
+
   # Set up the lander controller by giving it the array of terrain points given before 1st turn.
   #
   # @param surface_points [Array<Point>]
   def initialize(surface_points)
     @surface_points = surface_points
+    @lander_location_initialized = false
 
     initialize_landing_segment
     initialize_blocking_segments
@@ -30,6 +38,8 @@ class Controller
 
   # Have the lander controller provide each turn's "move" output string.
   #
+  # @param line [String] the 7-integer per-turn status: "X Y hSpeed vSpeed fuel rotate power"
+  #  for example "6500 2600 -20 0 1000 45 0"
   # @return [String] the output line for rotate and power to use this turn
   def call(line)
     # h_speed: the horizontal speed (in m/s), can be negative.
@@ -40,8 +50,17 @@ class Controller
     x, y, h_speed, v_speed, fuel, rotate, power = line.split(" ").map(&:to_f)
 
     # @points -= [@previous_lander_location]
-    @current_lander_location = Point.new(x, y)
+    self.current_lander_location = Point.new(x, y)
     # @points += [@current_lander_location]
+
+    if !@lander_location_initialized
+      initialize_lander_location
+
+      self.nodes_to_landing =
+        visibility_graph.dijkstra_shortest_path(current_lander_location.to_s, landing_segment.p1.to_s)[1..-1]
+
+      debug "NODES TO LANDING: #{nodes_to_landing.to_s}"
+    end
 
     # TODO, use a visibility graph to build the actual path. For now asuming landing is visible from lander
     # Array of sorted Segments from current lander position to preferred landing site
@@ -70,13 +89,13 @@ class Controller
         ]
       end
 
-    debug "Path to landing: #{@path_to_landing}"
+    debug "Path to landing: #{path_to_landing}"
 
     # given that the lander can't change settings dramatically, there's only a limited number of "moves":
     # 180 degrees * 5 power levels, and only a subset of these can be used given a previous move.
     # To start, we'll keep things simple - ignore inertia and only consider 8 cardinal directions with hardcoded "move" for each:
 
-    direction = @path_to_landing.first.eight_sector_angle
+    direction = path_to_landing.first.eight_sector_angle
     debug "Direction is: #{direction}"
 
     inertia_direction = Segment.new(Point.new(0, 0), Point.new(h_speed, v_speed)).eight_sector_angle
@@ -219,5 +238,20 @@ class Controller
     end
 
     @visibility_graph = graph
+  end
+
+  # we get lander location only on first turn, not init, so we'll have to check what the lander sees
+  # and build shortest path from there
+  def initialize_lander_location
+    surface_points.each do |point|
+      next if blocking_segments.find do |segment|
+        # segments that originate from either point cannot be visibility blockers for the pair
+        next if segment.originates_from?(point) || segment.originates_from?(current_lander_location)
+
+        Segment[point, current_lander_location].intersect?(segment)
+      end
+
+      @visibility_graph.connect_nodes_bidirectionally(point.to_s, current_lander_location.to_s)
+    end
   end
 end

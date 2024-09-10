@@ -24,4 +24,35 @@ RSpec.describe Controller, instance_name: :controller do
       )
     end
   end
+
+  describe "#call(line)" do
+    subject(:call) { controller.call(line) }
+
+    let(:controller) { described_class.new(surface) }
+
+    context "when initialized with simple two-hill surface and turn info" do
+      let(:surface) do
+        [
+          Point[0, 0],
+          Point[500, 100],
+          Point[1000, 0],
+          Point[2000, 0],
+          Point[2500, 100],
+          Point[6999, 0],
+        ]
+      end
+
+      let(:line) { "3000 80 0 4 5000 45 0" }
+
+      it "returns the immediate comand, and sets a long-term node-path to landing" do
+        expect(call).to eq("30 4")
+
+        expect(controller.visibility_graph["P[3000.0, 80.0]"][:outgoing]).to(
+          contain_exactly("P[2500, 100]", "P[6999, 0]")
+        )
+
+        expect(controller.nodes_to_landing).to eq(["P[2500, 100]", "P[1000, 0]"])
+      end
+    end
+  end
 end
