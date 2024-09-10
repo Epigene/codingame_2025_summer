@@ -1,3 +1,7 @@
+debug "Game starts!"
+# game loop
 loop do
-  puts "WAIT"
+  line = gets.chomp
+  debug(line)
+  puts controller.call(line)
 end

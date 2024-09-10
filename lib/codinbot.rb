@@ -2,7 +2,7 @@
 
 require "codinbot/version"
 require "requires"
-require "graph"
+require "geometry"
 
 module Codinbot
   class Error < StandardError; end
