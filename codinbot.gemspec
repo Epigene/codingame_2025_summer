@@ -1,8 +1,6 @@
-require_relative 'lib/codinbot/version'
-
 Gem::Specification.new do |spec|
   spec.name          = "codinbot"
-  spec.version       = Codinbot::VERSION
+  spec.version       = "1.0"
   spec.authors       = ["Epigene"]
   spec.email         = ["augusts.bautra@gmail.com"]
 

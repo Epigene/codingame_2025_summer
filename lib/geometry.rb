@@ -69,6 +69,11 @@ class Segment
     Math.sqrt(dx**2 + dy**2)
   end
 
+  # @param point [Point]
+  def originates_from?(point)
+    p1 == point || p2 == point
+  end
+
   # Useful in building visibility graph and shortest flight path
   def intersect?(other_segment)
     o1 = orientation(p1, p2, other_segment.p1)
@@ -102,6 +107,12 @@ class Segment
 
     # Otherwise, the line segments do not intersect
     false
+  end
+
+  # Helper function to check if point p3 lies on line segment p1p2 (for collinear case)
+  def on_segment?(p1, p2, p3)
+    p3.x >= [p1.x, p2.x].min && p3.x <= [p1.x, p2.x].max &&
+    p3.y >= [p1.y, p2.y].min && p3.y <= [p1.y, p2.y].max
   end
 
   # @return [Integer] a rounded angle the segment is facing in, in physics terms:
@@ -159,12 +170,6 @@ class Segment
   end
 
   private
-
-  # Helper function to check if point p3 lies on line segment p1p2 (for collinear case)
-  def on_segment?(p1, p2, p3)
-    p3.x >= [p1.x, p2.x].min && p3.x <= [p1.x, p2.x].max &&
-    p3.y >= [p1.y, p2.y].min && p3.y <= [p1.y, p2.y].max
-  end
 
   # Helper function to compute the orientation of triplet (A, B, C)
   def orientation(p1, p2, p3)
