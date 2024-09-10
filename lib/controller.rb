@@ -56,6 +56,8 @@ class Controller
     if !@lander_location_initialized
       initialize_lander_location
 
+      binding.pry
+
       self.nodes_to_landing =
         visibility_graph.dijkstra_shortest_path(current_lander_location.to_s, landing_segment.p1.to_s)[1..-1]
 
@@ -204,16 +206,22 @@ class Controller
   # disambiguate over-ground visibility from under-ground un-visibility we'll draw vertical lines
   # to 0 height also.
   def initialize_blocking_segments
-    @blocking_segments = []
+    surface_segments = []
     @surface_points.each_cons(2) do |a, b|
-      @blocking_segments << Segment[a, b]
+      surface_segments << Segment[a, b]
     end
 
+    virtual_segments = []
     @surface_points.each do |p|
       next if p.y.zero?
 
-      @blocking_segments << Segment[p, Point[p.x, 0]]
+      potential_segment = Segment[Point[p.x, p.y - 1], Point[p.x, 0]]
+      next if surface_segments.find { potential_segment.intersect?(_1) }
+
+      virtual_segments << potential_segment
     end
+
+    @blocking_segments = surface_segments + virtual_segments
 
     nil
   end
@@ -221,16 +229,21 @@ class Controller
   def initialize_visibility_graph
     graph = Graph.new
 
-    surface_points.each do |point|
-      # TODO, implement skipping of already checked pairs
-      surface_points.each do |other_point|
-        next if point == other_point
+    surface_points[0..-2].each_with_index do |point, i|
+      segment_to_next = Segment[point, surface_points[i.next]]
 
-        next if blocking_segments.find do |segment|
-          # segments that originate from either point cannot be visibility blockers for the pair
-          next if segment.originates_from?(point) || segment.originates_from?(other_point)
+      surface_points[i.next..].each do |other_point|
+        if other_point == surface_points[i.next]
+          # noop, neighboring points always see each other
+        else
+          next if segment_to_next.orientation(point, surface_points[i.next], other_point) == 2
 
-          Segment[point, other_point].intersect?(segment)
+          next if blocking_segments.find do |segment|
+            # segments that originate from either point cannot be visibility blockers for the pair
+            next if segment.originates_from?(point) || segment.originates_from?(other_point)
+
+            Segment[point, other_point].intersect?(segment)
+          end
         end
 
         graph.connect_nodes_bidirectionally(point.to_s, other_point.to_s)

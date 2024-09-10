@@ -53,6 +53,36 @@ RSpec.describe Segment do
     end
   end
 
+  describe "#orientation(p1, p2, p3)" do
+    subject(:orientation) { segment.orientation(*points) }
+
+    let(:segment) { described_class.new(Point[0, 0], Point[1, 1]) }
+
+    context "when p3 is on the left-hand side side" do
+      let(:points) { [Point[0, 0], Point[10, 10], Point[0, 1]] }
+
+      it { is_expected.to eq(1) }
+    end
+
+    context "when p3 is on the right-hand side" do
+      let(:points) { [Point[0, 0], Point[10, 10], Point[5, 0]] }
+
+      it { is_expected.to eq(2) }
+    end
+
+    context "when p3 is collinear" do
+      let(:points) { [Point[0, 0], Point[10, 10], Point[11, 11]] }
+
+      it { is_expected.to eq(0) }
+    end
+
+    context "when p3 is on the left-hand side side with original vector going towards origin" do
+      let(:points) { [Point[10, 10], Point[0, 0], Point[5, 0]] }
+
+      it { is_expected.to eq(1) }
+    end
+  end
+
   describe "#eight_sector_angle" do
     subject(:eight_sector_angle) { segment.eight_sector_angle }
 

@@ -115,6 +115,19 @@ class Segment
     p3.y >= [p1.y, p2.y].min && p3.y <= [p1.y, p2.y].max
   end
 
+  # Helper function to compute the orientation of triplet (A, B, C)
+  def orientation(p1, p2, p3)
+    val = (p3.y - p2.y) * (p2.x - p1.x) - (p3.x - p2.x) * (p2.y - p1.y)
+
+    if val == 0
+      return 0  # collinear
+    elsif val > 0
+      return 1
+    else
+      return 2
+    end
+  end
+
   # @return [Integer] a rounded angle the segment is facing in, in physics terms:
   # 0;0 -> 100; 1 == 1 degree
   # 0;0 -> 1; 100 == 89 degrees
@@ -167,20 +180,5 @@ class Segment
 
   def hash
     [@p1, @p2].hash
-  end
-
-  private
-
-  # Helper function to compute the orientation of triplet (A, B, C)
-  def orientation(p1, p2, p3)
-    val = (p3.y - p2.y) * (p2.x - p1.x) - (p3.x - p2.x) * (p2.y - p1.y)
-
-    if val == 0
-      return 0  # collinear
-    elsif val > 0
-      return 1  # clockwise
-    else
-      return 2  # counterclockwise
-    end
   end
 end
