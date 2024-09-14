@@ -63,24 +63,7 @@ class Controller
 
     self.current_lander_location = Point[x, y]
     initialize_original_route
-
-    # checking if the lander can see the next node in originally planned route
-    # and drop current as reached.
-    if nodes_to_landing.size > 1
-      next_point = text_to_point(nodes_to_landing[1])
-
-      blocker = blocking_segments.find do |segment|
-        # segments that originate from either point cannot be visibility blockers for the pair
-        next if segment.originates_from?(next_point) || segment.originates_from?(current_lander_location)
-
-        Segment[next_point, current_lander_location].intersect?(segment)
-      end
-
-      if blocker.nil?
-        debug("Lander can see the next node #{next_point} in planned route, dropping current as reached")
-        @nodes_to_landing = nodes_to_landing[1..]
-      end
-    end
+    remove_reached_node
 
     @current_path_segment = Segment[current_lander_location, text_to_point(nodes_to_landing.first)]
 
@@ -201,6 +184,26 @@ class Controller
     @lander_location_initialized = true
   end
 
+  def remove_reached_node
+    # checking if the lander can see the next node in originally planned route
+    # and drop current as reached.
+    if nodes_to_landing.size > 1
+      next_point = text_to_point(nodes_to_landing[1])
+
+      blocker = blocking_segments.find do |segment|
+        # segments that originate from either point cannot be visibility blockers for the pair
+        next if segment.originates_from?(next_point) || segment.originates_from?(current_lander_location)
+
+        Segment[next_point, current_lander_location].intersect?(segment)
+      end
+
+      if blocker.nil?
+        debug("Lander can see the next node #{next_point} in planned route, dropping current as reached")
+        @nodes_to_landing = nodes_to_landing[1..]
+      end
+    end
+  end
+
   def landing_procedures
     debug "Above landing strip, time to stabilise and land!"
 
@@ -231,15 +234,6 @@ class Controller
   # @param destination [Point]
   def cruising_to_point(destination)
     debug "Not above landing strip, cruising to #{destination}"
-    if v_speed.abs > MAX_SAFE_VERTICAL_CRUISE_SPEED
-      debug "EXCEEDING CRUISE deltaY, stabilising!"
-
-      if (_going_down_too_fast = v_speed.negative?)
-        return "0 4"
-      else
-        # return "0 2"
-      end
-    end
 
     unless h_speed.abs < MAX_SAFE_HORIZONTAL_SPEED
       # breaking based on inertia and estimated break path
@@ -252,7 +246,7 @@ class Controller
         correction = if (_going_right_too_fast = RIGHT_DIRECTIONS.include?(inertia_direction))
           case direction
           when 7 then "60 4"
-          else "22 4" # break maintining height
+          else "22 4" # break maintaining height
           end
         else # oh, going left too fast
           case direction
@@ -265,7 +259,7 @@ class Controller
       end
     end
 
-    # rotate power. rotate is the desired rotation angle. power is the desired thrust power.
+    debug("Outputting default cruise command")
     case direction
     when 1
       "-30 4"
@@ -276,13 +270,13 @@ class Controller
     when 4
       "30 4"
     when 5
-      "30 4"
-    when 6 # landing
-      "25 4"
-    when 7 # landing
-      "-25 4"
+      "45 4"
+    when 6 # need to descend
+      "60 4"
+    when 7 # need to descend
+      "-60 4"
     when 8
-      "-30 4"
+      "-45 4"
     else
       raise("Unkown direction")
     end
