@@ -19,8 +19,14 @@ class Point
     to_s
   end
 
+  def distance_to(other_point)
+    Segment[self, other_point].length
+  end
+
   def ==(other)
-    @x == other.x && @y == other.y
+    return false unless other.is_a?(Point)
+
+    x == other.x && y == other.y
   end
 
   def eql?(other)
@@ -28,7 +34,7 @@ class Point
   end
 
   def hash
-    [@x, @y].hash
+    [x, y].hash
   end
 end
 

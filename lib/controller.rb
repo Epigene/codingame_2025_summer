@@ -65,7 +65,7 @@ class Controller
     initialize_original_route
     remove_reached_node
 
-    @current_path_segment = Segment[current_lander_location, text_to_point(nodes_to_landing.first)]
+    @current_path_segment = Segment[current_lander_location, nodes_to_landing.first]
 
     # given that the lander can't change settings dramatically, there's only a limited number of "moves":
     # 180 degrees * 5 power levels, and only a subset of these can be used given a previous move.
@@ -91,11 +91,6 @@ class Controller
   end
 
   private
-
-  def text_to_point(text)
-    parts = text.split(", ")
-    Point[parts.first.split("[")[1].to_i, parts[1].split("]").first.to_i]
-  end
 
   def initialize_landing_segment
     @surface_points.each_cons(2) do |a, b|
@@ -133,7 +128,7 @@ class Controller
   end
 
   def initialize_visibility_graph
-    graph = Graph.new
+    graph = WeightedGraph.new
 
     surface_points[0..-2].each_with_index do |point, i|
       surface_points[i.next..].each do |other_point|
@@ -150,7 +145,7 @@ class Controller
           end
         end
 
-        graph.connect_nodes_bidirectionally(point.to_s, other_point.to_s)
+        graph.connect_nodes(point, other_point, point.distance_to(other_point))
       end
     end
 
@@ -168,7 +163,7 @@ class Controller
         Segment[point, current_lander_location].intersect?(segment)
       end
 
-      @visibility_graph.connect_nodes_bidirectionally(point.to_s, current_lander_location.to_s)
+      @visibility_graph.connect_nodes(point, current_lander_location, point.distance_to(current_lander_location))
     end
   end
 
@@ -178,7 +173,7 @@ class Controller
     initialize_lander_location
 
     self.nodes_to_landing =
-      visibility_graph.dijkstra_shortest_path(current_lander_location.to_s, landing_segment.p1.to_s)[1..-1]
+      visibility_graph.dijkstra_shortest_path(current_lander_location, landing_segment.p1)[1..-1]
 
     debug "NODES TO LANDING: #{nodes_to_landing.to_s}"
     @lander_location_initialized = true
@@ -188,7 +183,7 @@ class Controller
     # checking if the lander can see the next node in originally planned route
     # and drop current as reached.
     if nodes_to_landing.size > 1
-      next_point = text_to_point(nodes_to_landing[1])
+      next_point = nodes_to_landing[1]
 
       blocker = blocking_segments.find do |segment|
         # segments that originate from either point cannot be visibility blockers for the pair

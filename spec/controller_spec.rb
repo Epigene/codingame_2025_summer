@@ -26,6 +26,29 @@ RSpec.describe Controller, instance_name: :controller do
     ]
   end
 
+  let(:test_case_B_surface) do
+    [
+      Point[0, 1800],
+      Point[300, 1200],
+      Point[1000, 1550],
+      Point[2000, 1200],
+      Point[2500, 1650],
+      Point[3700, 220], # landing
+      Point[4700, 220], # landing
+      Point[4750, 1000],
+      Point[4700, 1650],
+      Point[4000, 1700],
+      Point[3700, 1600], # curve spike above landing
+      Point[3750, 1900], # curve hump 1
+      Point[4000, 2100], # curve hump 2
+      Point[4900, 2050], # curve hump 3
+      Point[5100, 1000],
+      Point[5500, 500],
+      Point[6200, 800],
+      Point[6999, 600]
+    ]
+  end
+
   describe "#initialize" do
     subject(:controller) { described_class.new(surface) }
 
@@ -45,10 +68,10 @@ RSpec.describe Controller, instance_name: :controller do
       it "initializes the surface visibility graph and detects landing segment" do
         expect(controller.landing_segment).to eq(Segment[Point[1000, 0], Point[2000,0]])
 
-        expect(controller.visibility_graph["P[0, 0]"][:outgoing]).to contain_exactly("P[500, 100]")
+        expect(controller.visibility_graph[Point[0, 0]].keys).to contain_exactly(Point[500, 100])
 
-        expect(controller.visibility_graph.dijkstra_shortest_path("P[0, 0]", "P[6999, 0]")).to eq(
-          ["P[0, 0]", "P[500, 100]", "P[2500, 100]", "P[6999, 0]"]
+        expect(controller.visibility_graph.dijkstra_shortest_path(Point[0, 0], Point[6999, 0])).to eq(
+          [Point[0, 0], Point[500, 100], Point[2500, 100], Point[6999, 0]]
         )
       end
     end
@@ -68,13 +91,13 @@ RSpec.describe Controller, instance_name: :controller do
       it "initializes the surface visibility graph and detects landing segment", :aggregate_failures do
         expect(controller.landing_segment).to eq(Segment[Point[3800, 100], Point[4800, 100]])
 
-        expect(controller.visibility_graph["P[0, 0]"][:outgoing]).to contain_exactly("P[4000, 2000]")
-        expect(controller.visibility_graph["P[6999, 500]"][:outgoing]).to(
-          contain_exactly("P[4000, 2000]", "P[3800, 1800]", "P[3800, 100]", "P[4800, 100]")
+        expect(controller.visibility_graph[Point[0, 0]].keys).to contain_exactly(Point[4000, 2000])
+        expect(controller.visibility_graph[Point[6999, 500]].keys).to(
+          contain_exactly(Point[4000, 2000], Point[3800, 1800], Point[3800, 100], Point[4800, 100])
         )
 
-        expect(controller.visibility_graph.dijkstra_shortest_path("P[0, 0]", "P[3800, 100]")).to eq(
-          ["P[0, 0]", "P[4000, 2000]", "P[3800, 100]"]
+        expect(controller.visibility_graph.dijkstra_shortest_path(Point[0, 0], Point[3800, 100])).to eq(
+          [Point[0, 0], Point[4000, 2000], Point[3800, 100]]
         )
       end
     end
@@ -97,13 +120,13 @@ RSpec.describe Controller, instance_name: :controller do
       it "initializes the surface visibility graph and detects landing segment", :aggregate_failures do
         expect(controller.landing_segment).to eq(Segment[Point[3500, 100], Point[4500, 100]])
 
-        expect(controller.visibility_graph["P[0, 0]"][:outgoing]).to contain_exactly("P[2000, 2000]")
-        expect(controller.visibility_graph["P[2000, 2000]"][:outgoing]).to(
-          contain_exactly("P[0, 0]", "P[3000, 1900]", "P[4000, 2000]")
+        expect(controller.visibility_graph[Point[0, 0]].keys).to contain_exactly(Point[2000, 2000])
+        expect(controller.visibility_graph[Point[2000, 2000]].keys).to(
+          contain_exactly(Point[0, 0], Point[3000, 1900], Point[4000, 2000])
         )
 
-        expect(controller.visibility_graph.dijkstra_shortest_path("P[0, 0]", "P[3500, 100]")).to eq(
-          ["P[0, 0]", "P[2000, 2000]", "P[4000, 2000]", "P[4000, 1500]", "P[3500, 100]"]
+        expect(controller.visibility_graph.dijkstra_shortest_path(Point[0, 0], Point[3500, 100])).to eq(
+          [Point[0, 0], Point[2000, 2000], Point[4000, 2000], Point[4000, 1500], Point[3500, 100]]
         )
       end
     end
@@ -126,10 +149,10 @@ RSpec.describe Controller, instance_name: :controller do
       it "discards the excess points and initializes a simpler surface visibility graph" do
         expect(controller.landing_segment).to eq(Segment[Point[1000, 1200], Point[2000, 1200]])
 
-        expect(controller.visibility_graph["P[0, 0]"][:outgoing]).to contain_exactly("P[200, 200]", "P[1000, 1200]")
+        expect(controller.visibility_graph[Point[0, 0]].keys).to contain_exactly(Point[200, 200], Point[1000, 1200])
 
-        expect(controller.visibility_graph.dijkstra_shortest_path("P[0, 0]", "P[6999, 0]")).to eq(
-          ["P[0, 0]", "P[1000, 1200]", "P[2000, 1200]", "P[6999, 0]"]
+        expect(controller.visibility_graph.dijkstra_shortest_path(Point[0, 0], Point[6999, 0])).to eq(
+          [Point[0, 0], Point[1000, 1200], Point[2000, 1200], Point[6999, 0]]
         )
       end
     end
@@ -157,11 +180,11 @@ RSpec.describe Controller, instance_name: :controller do
       it "returns the immediate comand, and sets a long-term node-path to landing" do
         expect(call).to eq("30 4")
 
-        expect(controller.visibility_graph["P[3000.0, 80.0]"][:outgoing]).to(
-          contain_exactly("P[2500, 100]", "P[6999, 0]")
+        expect(controller.visibility_graph[Point[3000.0, 80.0]].keys).to(
+          contain_exactly(Point[2500, 100], Point[6999, 0])
         )
 
-        expect(controller.nodes_to_landing).to eq(["P[2500, 100]", "P[1000, 0]"])
+        expect(controller.nodes_to_landing).to eq([Point[2500, 100], Point[1000, 0]])
       end
     end
 
@@ -171,9 +194,9 @@ RSpec.describe Controller, instance_name: :controller do
       let(:line) { "6500 2600 -20 0 1000 45 0" }
 
       it "returns the immediate move and sets up path to landing" do
-        expect(call).to eq("30 4")
+        expect(call).to eq("45 4")
 
-        expect(controller.nodes_to_landing).to eq(["P[2200, 150]"])
+        expect(controller.nodes_to_landing).to eq([Point[2200, 150]])
       end
     end
 
@@ -186,7 +209,7 @@ RSpec.describe Controller, instance_name: :controller do
         expect(call).to eq("-22 4")
 
         expect(controller.nodes_to_landing).to eq(
-          ["P[5500, 1500]", "P[2400, 2000]", "P[4500, 1450]", "P[2200, 150]"]
+          [Point[5500, 1500], Point[5000, 1550], Point[4500, 1450], Point[2200, 150]]
         )
       end
     end
@@ -205,7 +228,7 @@ RSpec.describe Controller, instance_name: :controller do
         expect(call).to eq("30 4")
 
         expect(controller.nodes_to_landing).to eq(
-          ["P[2400, 2000]", "P[4500, 1450]", "P[2200, 150]"]
+          [Point[5000, 1550], Point[4500, 1450], Point[2200, 150]]
         )
       end
     end
@@ -222,6 +245,20 @@ RSpec.describe Controller, instance_name: :controller do
 
       it "returns immediate move to shut off engines and get more positive Y (falling from gravity)" do
         expect(call).to eq("-60 4")
+      end
+    end
+
+    context "when initialized with test case B surface and spawn" do
+      let(:surface) { test_case_B_surface }
+
+      let(:line) { "6500 2000 0 0 1200 0 0" } # B original spawn
+
+      it "returns the immediate move and planned route looping around curved surface" do
+        expect(call).to eq("30 4")
+
+        expect(controller.nodes_to_landing).to eq(
+          [Point[4000, 2100], Point[3750, 1900], Point[3700, 1600], Point[3700, 220]]
+        )
       end
     end
   end
