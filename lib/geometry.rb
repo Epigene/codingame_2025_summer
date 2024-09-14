@@ -40,6 +40,19 @@ class Segment
     new(p1, p2)
   end
 
+  # Helper function to compute the orientation of triplet (A, B, C)
+  def self.orientation(p1, p2, p3)
+    val = (p3.y - p2.y) * (p2.x - p1.x) - (p3.x - p2.x) * (p2.y - p1.y)
+
+    if val == 0
+      return 0  # collinear
+    elsif val > 0
+      return 1
+    else
+      return 2
+    end
+  end
+
   # @param p1, p1 [Point]
   def initialize(p1, p2)
     @p1 = p1
@@ -76,10 +89,10 @@ class Segment
 
   # Useful in building visibility graph and shortest flight path
   def intersect?(other_segment)
-    o1 = orientation(p1, p2, other_segment.p1)
-    o2 = orientation(p1, p2, other_segment.p2)
-    o3 = orientation(other_segment.p1, other_segment.p2, p1)
-    o4 = orientation(other_segment.p1, other_segment.p2, p2)
+    o1 = Segment.orientation(p1, p2, other_segment.p1)
+    o2 = Segment.orientation(p1, p2, other_segment.p2)
+    o3 = Segment.orientation(other_segment.p1, other_segment.p2, p1)
+    o4 = Segment.orientation(other_segment.p1, other_segment.p2, p2)
 
     # General case
     return true if o1 != o2 && o3 != o4
@@ -113,19 +126,6 @@ class Segment
   def on_segment?(p1, p2, p3)
     p3.x >= [p1.x, p2.x].min && p3.x <= [p1.x, p2.x].max &&
     p3.y >= [p1.y, p2.y].min && p3.y <= [p1.y, p2.y].max
-  end
-
-  # Helper function to compute the orientation of triplet (A, B, C)
-  def orientation(p1, p2, p3)
-    val = (p3.y - p2.y) * (p2.x - p1.x) - (p3.x - p2.x) * (p2.y - p1.y)
-
-    if val == 0
-      return 0  # collinear
-    elsif val > 0
-      return 1
-    else
-      return 2
-    end
   end
 
   # @return [Integer] a rounded angle the segment is facing in, in physics terms:

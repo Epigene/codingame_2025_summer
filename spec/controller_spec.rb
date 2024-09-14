@@ -1,4 +1,31 @@
 RSpec.describe Controller, instance_name: :controller do
+  let(:test_case_A_surface) do
+    [
+      Point[0, 450],
+      Point[300, 750],
+      Point[1000, 450],
+      Point[1500, 650],
+      Point[1800, 850],
+      Point[2000, 1950],
+      Point[2200, 1850],
+      Point[2400, 2000],
+      Point[3100, 1800],
+      Point[3150, 1550],
+      Point[2500, 1600],
+      Point[2200, 1550],
+      Point[2100, 750],
+      Point[2200, 150], # landing
+      Point[3200, 150], # landing
+      Point[3500, 450],
+      Point[4000, 950],
+      Point[4500, 1450],
+      Point[5000, 1550],
+      Point[5500, 1500],
+      Point[6000, 950],
+      Point[6999, 1750],
+    ]
+  end
+
   describe "#initialize" do
     subject(:controller) { described_class.new(surface) }
 
@@ -80,6 +107,32 @@ RSpec.describe Controller, instance_name: :controller do
         )
       end
     end
+
+    context "when given a sneaky surface with points resulting in a straight-line terrain" do
+      let(:surface) do
+        [
+          Point[0, 0],
+          Point[100, 100], # redundant because subsumed under neighbors
+          Point[200, 200],
+          Point[1000, 1200], # landing
+          Point[2000, 1200], # landing
+          Point[3000, 950], # redundant because subsumed
+          Point[4000, 700], # redundant because subsumed
+          Point[6000, 200],
+          Point[6999, 0],
+        ]
+      end
+
+      it "discards the excess points and initializes a simpler surface visibility graph" do
+        expect(controller.landing_segment).to eq(Segment[Point[1000, 1200], Point[2000, 1200]])
+
+        expect(controller.visibility_graph["P[0, 0]"][:outgoing]).to contain_exactly("P[200, 200]", "P[1000, 1200]")
+
+        expect(controller.visibility_graph.dijkstra_shortest_path("P[0, 0]", "P[6999, 0]")).to eq(
+          ["P[0, 0]", "P[1000, 1200]", "P[2000, 1200]", "P[6999, 0]"]
+        )
+      end
+    end
   end
 
   describe "#call(line)" do
@@ -112,38 +165,48 @@ RSpec.describe Controller, instance_name: :controller do
       end
     end
 
-    context "when initialized with A terrain and starting location" do
-      let(:surface) do
-        [
-          Point[0, 450],
-          Point[300, 750],
-          Point[1000, 450],
-          Point[1500, 650],
-          Point[1800, 850],
-          Point[2000, 1950],
-          Point[2200, 1850],
-          Point[2400, 2000],
-          Point[3100, 1800],
-          Point[3150, 1550],
-          Point[2500, 1600],
-          Point[2200, 1550],
-          Point[2100, 750],
-          Point[2200, 150], # landing
-          Point[3200, 150], # landing
-          Point[3500, 450],
-          Point[4000, 950],
-          Point[4500, 1450],
-          Point[5000, 1550],
-          Point[5500, 1500],
-          Point[6000, 950],
-          Point[6999, 1750],
-        ]
-      end
+    context "when initialized with test case A terrain and starting location" do
+      let(:surface) { test_case_A_surface }
 
       let(:line) { "6500 2600 -20 0 1000 45 0" }
 
       it "returns the immediate move and sets up path to landing" do
-        expect(call).to eq("YAY")
+        expect(call).to eq("30 4")
+
+        expect(controller.nodes_to_landing).to eq(["P[2200, 150]"])
+      end
+    end
+
+    context "when initialized with test case A terrain in the rightmost canyon" do
+      let(:surface) { test_case_A_surface }
+
+      let(:line) { "6000, 1000 -57 -8 846 -7 4" }
+
+      it "returns immediate move and calculates nodes_to_landing" do
+        expect(call).to eq("-22 4")
+
+        expect(controller.nodes_to_landing).to eq(
+          ["P[5500, 1500]", "P[2400, 2000]", "P[4500, 1450]", "P[2200, 150]"]
+        )
+      end
+    end
+
+    context "when initialized with test case A terrain just outside and to the left of the the rightmost canyon" do
+      let(:surface) { test_case_A_surface }
+
+      let(:line) { "5500, 1501 0 0 846 -7 4" }
+      let(:original_spawn_line) { "6000, 1000 -57 -8 846 -7 4" }
+
+      before do
+        controller.call(original_spawn_line)
+      end
+
+      it "returns immediate move and drops the P[5500, 1500] node from :nodes_to_landing as reached because lander can see the next node" do
+        expect(call).to eq("30 4")
+
+        expect(controller.nodes_to_landing).to eq(
+          ["P[2400, 2000]", "P[4500, 1450]", "P[2200, 150]"]
+        )
       end
     end
   end

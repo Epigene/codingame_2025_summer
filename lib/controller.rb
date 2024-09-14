@@ -17,12 +17,9 @@ class Controller
   attr_reader :surface_points, :landing_segment, :blocking_segments, :previous_lander_location
   attr_reader :visibility_graph
 
-  attr_accessor :current_lander_location, :path_to_landing
-  # LEGACY aka "I see landing strip, going for it"
-  attr_accessor :path_to_landing
-
-  # MODERN, an array of nodes omitting lander's location which should be visited.
   attr_accessor :nodes_to_landing
+  attr_accessor :x, :y, :h_speed, :v_speed, :fuel, :rotate, :power
+  attr_accessor :current_lander_location, :current_path_segment, :direction, :inertia_direction
 
   # Set up the lander controller by giving it the array of terrain points given before 1st turn.
   #
@@ -31,9 +28,24 @@ class Controller
     @surface_points = surface_points
     @lander_location_initialized = false
 
+    collate_surface_points
     initialize_landing_segment
     initialize_blocking_segments
     initialize_visibility_graph
+  end
+
+  def collate_surface_points
+    points_to_remove = []
+
+    @surface_points.each_cons(3) do |a, b, c|
+      next unless Segment.orientation(a, b, c).zero?
+
+      points_to_remove << b
+    end
+
+    debug("Detected these points as redundant to constructing the surface: #{points_to_remove}")
+
+    @surface_points -= points_to_remove
   end
 
   # Have the lander controller provide each turn's "move" output string.
@@ -47,64 +59,40 @@ class Controller
     # fuel: the quantity of remaining fuel in liters.
     # rotate: the rotation angle in degrees (-90 to 90). E=0, S=90, W=180 N=270
     # power: the thrust power (0 to 4).
-    x, y, h_speed, v_speed, fuel, rotate, power = line.split(" ").map(&:to_f)
+    @x, @y, @h_speed, @v_speed, @fuel, @rotate, @power = line.split(" ").map(&:to_f)
 
-    # @points -= [@previous_lander_location]
-    self.current_lander_location = Point.new(x, y)
-    # @points += [@current_lander_location]
+    self.current_lander_location = Point[x, y]
+    initialize_original_route
 
-    if !@lander_location_initialized
-      initialize_lander_location
+    # checking if the lander can see the next node in originally planned route
+    # and drop current as reached.
+    if nodes_to_landing.size > 1
+      next_point = text_to_point(nodes_to_landing[1])
 
-      binding.pry
+      blocker = blocking_segments.find do |segment|
+        # segments that originate from either point cannot be visibility blockers for the pair
+        next if segment.originates_from?(next_point) || segment.originates_from?(current_lander_location)
 
-      self.nodes_to_landing =
-        visibility_graph.dijkstra_shortest_path(current_lander_location.to_s, landing_segment.p1.to_s)[1..-1]
+        Segment[next_point, current_lander_location].intersect?(segment)
+      end
 
-      debug "NODES TO LANDING: #{nodes_to_landing.to_s}"
+      if blocker.nil?
+        debug("Lander can see the next node #{next_point} in planned route, dropping current as reached")
+        @nodes_to_landing = nodes_to_landing[1..]
+      end
     end
 
-    # TODO, use a visibility graph to build the actual path. For now asuming landing is visible from lander
-    # Array of sorted Segments from current lander position to preferred landing site
-    @closest_point_to_land =
-      if x < landing_segment.p1.x
-        # landing_segment.p1
-        # adding some safety margins
-        Point.new(landing_segment.p1.x+50, landing_segment.p1.y+50)
-      elsif landing_segment.p2.x < x
-        # landing_segment.p2
-        Point.new(landing_segment.p2.x-50, landing_segment.p2.y+50)
-      else # on top of landing strip, just descend
-        Point.new(x, landing_segment.p1.y+10)
-      end
-
-    direct_line_to_landing = Segment.new(@current_lander_location, @closest_point_to_land)
-
-    @path_to_landing =
-      if direct_line_to_landing.length < 200
-        [direct_line_to_landing]
-      else
-        point_just_above_landing = Point.new(@closest_point_to_land.x, @closest_point_to_land.y+200)
-        [
-          Segment.new(@current_lander_location, point_just_above_landing),
-          direct_line_to_landing
-        ]
-      end
-
-    debug "Path to landing: #{path_to_landing}"
+    @current_path_segment = Segment[current_lander_location, text_to_point(nodes_to_landing.first)]
 
     # given that the lander can't change settings dramatically, there's only a limited number of "moves":
     # 180 degrees * 5 power levels, and only a subset of these can be used given a previous move.
     # To start, we'll keep things simple - ignore inertia and only consider 8 cardinal directions with hardcoded "move" for each:
 
-    direction = path_to_landing.first.eight_sector_angle
-    debug "Direction is: #{direction}"
+    @direction = current_path_segment.eight_sector_angle
+    debug "Need to move in direction #{direction}"
 
-    inertia_direction = Segment.new(Point.new(0, 0), Point.new(h_speed, v_speed)).eight_sector_angle
+    @inertia_direction = Segment.new(Point.new(0, 0), Point.new(h_speed, v_speed)).eight_sector_angle
     debug "Inertia direction is: #{inertia_direction}"
-
-    # setting breadcrumb for next round
-    @previous_lander_location = @current_lander_location
 
     # breaking if excessive inertia
     if v_speed.abs > MAX_SAFE_VERTICAL_SPEED
@@ -112,84 +100,19 @@ class Controller
       return "0 4"
     end
 
-    if _over_landing_strip = @path_to_landing.size <= 2 && (landing_segment.p1.x..landing_segment.p2.x).include?(x)
-      debug "Above landing strip, time to stabilise and land!"
-
-      if h_speed.abs > MAX_SAFE_HORIZONTAL_SPEED && LANDING_DIRECTIONS.include?(direction)
-        debug "HORIZONTAL SLIP DETECTED, BREAKING!"
-        if (_going_right_too_fast = RIGHT_DIRECTIONS.include?(inertia_direction))
-          return "23 4"
-        else
-          return "-23 4"
-        end
-      end
-
-      if _brace_for_impact = @path_to_landing.first.dx.abs < 400 && @path_to_landing.first.dy.abs < 300
-        if v_speed > MAX_SAFE_VERTICAL_SPEED*(2/3.to_f)
-          return "0 3"
-        else
-          return "0 2"
-        end
-      end
-
-      if h_speed.positive?
-        return "15 3"
-      else
-        return "-15 3"
-      end
+    if _over_landing_strip = nodes_to_landing.size <= 2 && (landing_segment.p1.x..landing_segment.p2.x).include?(x)
+      landing_procedures
     else # as in keep cruisin'
-      debug "Not above landing strip, keeping cruise on"
-      if v_speed.abs > MAX_SAFE_VERTICAL_CRUISE_SPEED
-        debug "EXCEEDING CRUISE deltaY, stabilising!"
-
-        if (_going_down_too_fast = v_speed.negative?)
-          return "0 4"
-        else
-          # return "0 2"
-        end
-      end
-
-      unless h_speed.abs < MAX_SAFE_HORIZONTAL_SPEED
-        # breaking based on inertia and estimated break path
-        seconds_to_cover_ground = (@path_to_landing.first.dx.abs / h_speed.abs).round
-        seconds_to_break_to_safe_speed = ((h_speed.abs - MAX_SAFE_HORIZONTAL_SPEED) /1.5).round
-
-        debug "Traveling at current speed of #{h_speed}, covering #{@path_to_landing.first.dx.abs}m will take #{seconds_to_cover_ground}s, but breaking #{seconds_to_break_to_safe_speed}s"
-        if seconds_to_break_to_safe_speed >= seconds_to_cover_ground || seconds_to_cover_ground < 10
-          debug "Breaking to keep overshoot to a minumum"
-          if (_going_right_too_fast = RIGHT_DIRECTIONS.include?(inertia_direction))
-            return "22 4"
-          else
-            return "-22 4"
-          end
-        end
-      end
-
-      # rotate power. rotate is the desired rotation angle. power is the desired thrust power.
-      case direction
-      when 1
-        "-30 4"
-      when 2
-        "-5 4"
-      when 3
-        "5 4"
-      when 4
-        "30 4"
-      when 5
-        "30 4"
-      when 6 # landing
-        "25 4"
-      when 7 # landing
-        "-25 4"
-      when 8
-        "-30 4"
-      else
-        raise("Unkown direction")
-      end
+      cruising_to_point(nodes_to_landing.first)
     end
   end
 
   private
+
+  def text_to_point(text)
+    parts = text.split(", ")
+    Point[parts.first.split("[")[1].to_i, parts[1].split("]").first.to_i]
+  end
 
   def initialize_landing_segment
     @surface_points.each_cons(2) do |a, b|
@@ -236,7 +159,7 @@ class Controller
         if other_point == surface_points[i.next]
           # noop, neighboring points always see each other
         else
-          next if segment_to_next.orientation(point, surface_points[i.next], other_point) == 2
+          next if Segment.orientation(point, surface_points[i.next], other_point) == 2
 
           next if blocking_segments.find do |segment|
             # segments that originate from either point cannot be visibility blockers for the pair
@@ -265,6 +188,97 @@ class Controller
       end
 
       @visibility_graph.connect_nodes_bidirectionally(point.to_s, current_lander_location.to_s)
+    end
+  end
+
+  def initialize_original_route
+    return if @lander_location_initialized
+
+    initialize_lander_location
+
+    self.nodes_to_landing =
+      visibility_graph.dijkstra_shortest_path(current_lander_location.to_s, landing_segment.p1.to_s)[1..-1]
+
+    debug "NODES TO LANDING: #{nodes_to_landing.to_s}"
+    @lander_location_initialized = true
+  end
+
+  def landing_procedures
+    debug "Above landing strip, time to stabilise and land!"
+
+    if h_speed.abs > MAX_SAFE_HORIZONTAL_SPEED && LANDING_DIRECTIONS.include?(direction)
+      debug "HORIZONTAL SLIP DETECTED, BREAKING!"
+      if (_going_right_too_fast = RIGHT_DIRECTIONS.include?(inertia_direction))
+        return "23 4"
+      else
+        return "-23 4"
+      end
+    end
+
+    if _brace_for_impact = current_path_segment.dx.abs < 400 && current_path_segment.dy.abs < 300
+      if v_speed > MAX_SAFE_VERTICAL_SPEED*(2/3.to_f)
+        return "0 3"
+      else
+        return "0 2"
+      end
+    end
+
+    if h_speed.positive?
+      return "15 3"
+    else
+      return "-15 3"
+    end
+  end
+
+  # @param destination [Point]
+  def cruising_to_point(destination)
+    debug "Not above landing strip, cruising to #{destination}"
+    if v_speed.abs > MAX_SAFE_VERTICAL_CRUISE_SPEED
+      debug "EXCEEDING CRUISE deltaY, stabilising!"
+
+      if (_going_down_too_fast = v_speed.negative?)
+        return "0 4"
+      else
+        # return "0 2"
+      end
+    end
+
+    unless h_speed.abs < MAX_SAFE_HORIZONTAL_SPEED
+      # breaking based on inertia and estimated break path
+      seconds_to_cover_ground = (current_path_segment.dx.abs / h_speed.abs).round
+      seconds_to_break_to_safe_speed = ((h_speed.abs - MAX_SAFE_HORIZONTAL_SPEED) /1.5).round
+
+      debug "Traveling at current speed of #{h_speed}, covering #{current_path_segment.dx.abs}m will take #{seconds_to_cover_ground}s, but breaking #{seconds_to_break_to_safe_speed}s"
+      if seconds_to_break_to_safe_speed >= seconds_to_cover_ground || seconds_to_cover_ground < 10
+        debug "Breaking to keep overshoot to a minumum"
+        if (_going_right_too_fast = RIGHT_DIRECTIONS.include?(inertia_direction))
+          return "22 4"
+        else # oh, going left too fast
+          return "-22 4"
+        end
+      end
+    end
+
+    # rotate power. rotate is the desired rotation angle. power is the desired thrust power.
+    case direction
+    when 1
+      "-30 4"
+    when 2
+      "-5 4"
+    when 3
+      "5 4"
+    when 4
+      "30 4"
+    when 5
+      "30 4"
+    when 6 # landing
+      "25 4"
+    when 7 # landing
+      "-25 4"
+    when 8
+      "-30 4"
+    else
+      raise("Unkown direction")
     end
   end
 end

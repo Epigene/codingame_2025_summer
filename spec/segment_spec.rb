@@ -53,8 +53,8 @@ RSpec.describe Segment do
     end
   end
 
-  describe "#orientation(p1, p2, p3)" do
-    subject(:orientation) { segment.orientation(*points) }
+  describe ".orientation(p1, p2, p3)" do
+    subject(:orientation) { described_class.orientation(*points) }
 
     let(:segment) { described_class.new(Point[0, 0], Point[1, 1]) }
 
