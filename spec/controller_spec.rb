@@ -209,5 +209,20 @@ RSpec.describe Controller, instance_name: :controller do
         )
       end
     end
+
+    context "when initialized with test case A surface and should start lowering (inertia 5 to direction 6)" do
+      let(:surface) { test_case_A_surface }
+
+      let(:line) { "4148 2252 -66 -7 826 -7 4" }
+      let(:original_spawn_line) { "6500 2600 -20 0 1000 45 0" }
+
+      before do
+        controller.call(original_spawn_line)
+      end
+
+      it "returns immediate move to shut off engines and get more positive Y (falling from gravity)" do
+        expect(call).to eq("-60 4")
+      end
+    end
   end
 end

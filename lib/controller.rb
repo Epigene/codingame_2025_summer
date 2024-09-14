@@ -153,8 +153,6 @@ class Controller
     graph = Graph.new
 
     surface_points[0..-2].each_with_index do |point, i|
-      segment_to_next = Segment[point, surface_points[i.next]]
-
       surface_points[i.next..].each do |other_point|
         if other_point == surface_points[i.next]
           # noop, neighboring points always see each other
@@ -248,14 +246,22 @@ class Controller
       seconds_to_cover_ground = (current_path_segment.dx.abs / h_speed.abs).round
       seconds_to_break_to_safe_speed = ((h_speed.abs - MAX_SAFE_HORIZONTAL_SPEED) /1.5).round
 
-      debug "Traveling at current speed of #{h_speed}, covering #{current_path_segment.dx.abs}m will take #{seconds_to_cover_ground}s, but breaking #{seconds_to_break_to_safe_speed}s"
+      debug "Traveling at current speed of #{h_speed}, covering #{current_path_segment.dx.abs}m will take #{seconds_to_cover_ground}s, but stabilising #{seconds_to_break_to_safe_speed}s"
       if seconds_to_break_to_safe_speed >= seconds_to_cover_ground || seconds_to_cover_ground < 10
         debug "Breaking to keep overshoot to a minumum"
-        if (_going_right_too_fast = RIGHT_DIRECTIONS.include?(inertia_direction))
-          return "22 4"
+        correction = if (_going_right_too_fast = RIGHT_DIRECTIONS.include?(inertia_direction))
+          case direction
+          when 7 then "60 4"
+          else "22 4" # break maintining height
+          end
         else # oh, going left too fast
-          return "-22 4"
+          case direction
+          when 6 then "-60 4"
+          else "-22 4" # break maintining height
+          end
         end
+
+        return correction
       end
     end
 
