@@ -1,4 +1,34 @@
 RSpec.describe Segment do
+  describe ".orientation(p1, p2, p3)" do
+    subject(:orientation) { described_class.orientation(*points) }
+
+    let(:segment) { described_class.new(Point[0, 0], Point[1, 1]) }
+
+    context "when p3 is on the left-hand side side" do
+      let(:points) { [Point[0, 0], Point[10, 10], Point[0, 1]] }
+
+      it { is_expected.to eq(1) }
+    end
+
+    context "when p3 is on the right-hand side" do
+      let(:points) { [Point[0, 0], Point[10, 10], Point[5, 0]] }
+
+      it { is_expected.to eq(2) }
+    end
+
+    context "when p3 is collinear" do
+      let(:points) { [Point[0, 0], Point[10, 10], Point[11, 11]] }
+
+      it { is_expected.to eq(0) }
+    end
+
+    context "when p3 is on the left-hand side side with original vector going towards origin" do
+      let(:points) { [Point[10, 10], Point[0, 0], Point[5, 0]] }
+
+      it { is_expected.to eq(1) }
+    end
+  end
+
   describe "#intersect?(other_segment)" do
     subject(:intersect?) { segment.intersect?(other_segment) }
 
@@ -53,33 +83,23 @@ RSpec.describe Segment do
     end
   end
 
-  describe ".orientation(p1, p2, p3)" do
-    subject(:orientation) { described_class.orientation(*points) }
+  describe "#delta_vector" do
+    subject(:delta_vector) { segment.delta_vector }
 
-    let(:segment) { described_class.new(Point[0, 0], Point[1, 1]) }
+    context "when the segment is going up and to the right" do
+      let(:segment) { described_class[Point[1, 1], Point[2, 3]] }
 
-    context "when p3 is on the left-hand side side" do
-      let(:points) { [Point[0, 0], Point[10, 10], Point[0, 1]] }
-
-      it { is_expected.to eq(1) }
+      it "returns a new segment indicating raw direction of the segment" do
+        is_expected.to eq(described_class[Point[0, 0], Point[1, 2]])
+      end
     end
 
-    context "when p3 is on the right-hand side" do
-      let(:points) { [Point[0, 0], Point[10, 10], Point[5, 0]] }
+    context "when the segment is going downleft" do
+      let(:segment) { described_class[Point[1, 1], Point[-1, -3]] }
 
-      it { is_expected.to eq(2) }
-    end
-
-    context "when p3 is collinear" do
-      let(:points) { [Point[0, 0], Point[10, 10], Point[11, 11]] }
-
-      it { is_expected.to eq(0) }
-    end
-
-    context "when p3 is on the left-hand side side with original vector going towards origin" do
-      let(:points) { [Point[10, 10], Point[0, 0], Point[5, 0]] }
-
-      it { is_expected.to eq(1) }
+      it "returns a new segment indicating raw direction of the segment" do
+        is_expected.to eq(described_class[Point[0, 0], Point[-2, -4]])
+      end
     end
   end
 

@@ -61,6 +61,8 @@ class Segment
 
   # @param p1, p1 [Point]
   def initialize(p1, p2)
+    p1.is_a?(Point) && p2.is_a?(Point) || raise(ArgumentError.new("Segment initialized with non-point arguments"))
+
     @p1 = p1
     @p2 = p2
   end
@@ -71,6 +73,11 @@ class Segment
 
   def inspect
     to_s
+  end
+
+  # The direction and length when transposed to origin point. So S[P[1, 1], P[2, 3]] vector is 1, 2
+  def delta_vector
+    self.class[Point[0, 0], Point[dx, dy]]
   end
 
   # change in x
@@ -132,15 +139,6 @@ class Segment
   def on_segment?(p1, p2, p3)
     p3.x >= [p1.x, p2.x].min && p3.x <= [p1.x, p2.x].max &&
     p3.y >= [p1.y, p2.y].min && p3.y <= [p1.y, p2.y].max
-  end
-
-  # @return [Integer] a rounded angle the segment is facing in, in physics terms:
-  # 0;0 -> 100; 1 == 1 degree
-  # 0;0 -> 1; 100 == 89 degrees
-  # 0;0 -> -100; 1 == 179 degrees
-  # 0;0 -> 100;-1 == 359 degrees
-  def angle
-    # TODO
   end
 
   # @return [Integer 1..8] the section of pie the angle is pointing in
