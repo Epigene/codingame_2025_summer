@@ -106,6 +106,14 @@ RSpec.describe Segment do
   describe "#eight_sector_angle" do
     subject(:eight_sector_angle) { segment.eight_sector_angle }
 
+    context "when the segment is pointing to 0 Deg (exactly E)" do
+      let(:segment) { described_class[Point[0, 0], Point[10, 0]] }
+
+      it "returns 1 to nudge slight ascension" do
+        is_expected.to eq(1)
+      end
+    end
+
     context "when the segment is pointing from 0 to 45 Deg" do
       let(:segment) { described_class[Point[0, 0], Point[10, 9]] }
 
@@ -122,6 +130,14 @@ RSpec.describe Segment do
       let(:segment) { described_class[Point[0, 0], Point[-1, 10]] }
 
       it { is_expected.to eq(3) }
+    end
+
+    context "when the segment is pointing to 180 Deg (exactly W)" do
+      let(:segment) { described_class[Point[0, 0], Point[-10, 0]] }
+
+      it "returns 4 to nudge slight ascension" do
+        is_expected.to eq(4)
+      end
     end
 
     context "when the segment is pointing from 135 to 180 Deg" do

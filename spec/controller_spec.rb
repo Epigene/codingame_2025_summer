@@ -57,6 +57,7 @@ RSpec.describe Controller, instance_name: :controller do
       Point[1000, 0], # landing
       Point[2000, 0], # landing
       Point[2500, 100],
+      Point[2510, 10],
       Point[6999, 0],
     ]
   end
@@ -186,7 +187,7 @@ RSpec.describe Controller, instance_name: :controller do
           contain_exactly(Point[2500, 100], Point[6999, 0])
         )
 
-        expect(controller.nodes_to_landing).to eq([Point[2500, 100], Point[1000, 0]])
+        expect(controller.nodes_to_landing).to eq([Point[2500, 100], Point[2000, 0]])
       end
     end
 
@@ -198,7 +199,7 @@ RSpec.describe Controller, instance_name: :controller do
       it "returns the immediate move and sets up path to landing" do
         expect(call).to eq("45 4")
 
-        expect(controller.nodes_to_landing).to eq([Point[2200, 150]])
+        expect(controller.nodes_to_landing).to eq([Point[4500, 1450], Point[3200, 150]])
       end
     end
 
@@ -211,7 +212,7 @@ RSpec.describe Controller, instance_name: :controller do
         expect(call).to eq("-22 4")
 
         expect(controller.nodes_to_landing).to eq(
-          [Point[5500, 1500], Point[5000, 1550], Point[4500, 1450], Point[2200, 150]]
+          [Point[5500, 1500], Point[5000, 1550], Point[4500, 1450], Point[3200, 150]]
         )
       end
     end
@@ -227,10 +228,10 @@ RSpec.describe Controller, instance_name: :controller do
       end
 
       it "returns immediate move and drops the P[5500, 1500] node from :nodes_to_landing as reached because lander can see the next node" do
-        expect(call).to eq("22 4")
+        expect(call).to eq("0 4")
 
         expect(controller.nodes_to_landing).to eq(
-          [Point[5000, 1550], Point[4500, 1450], Point[2200, 150]]
+          [Point[5000, 1550], Point[4500, 1450], Point[3200, 150]]
         )
       end
     end
@@ -253,17 +254,34 @@ RSpec.describe Controller, instance_name: :controller do
     context "when initialized with simple surface and needing to go exactly left" do
       let(:surface) { simple_surface }
 
-      # Point[0, 0],
-      # Point[500, 100],
-      # Point[1000, 0], # landing
-      # Point[2000, 0], # landing
-      # Point[2500, 100],
-      # Point[6999, 0],
-
       let(:line) { "2550 100 0 0 1200 0 0" }
 
+      it "returns the immediate move and plans correct route" do
+        expect(call).to eq("21 4") # TODO, if taking power level into account, full vertical is best
+
+        expect(controller.nodes_to_landing.first).to eq(Point[2500, 100])
+      end
+    end
+
+    context "when initialized with simple surface and needing to go exactly left-up (45deg), and inertia is already massively up" do
+      let(:surface) { simple_surface }
+
+      let(:line) { "2550 50 0 50 1200 0 0" }
+
+      it "returns the immediate move to burn hard left and sets planned route" do
+        expect(call).to eq("10 4")
+
+        expect(controller.nodes_to_landing.first).to eq(Point[2500, 100])
+      end
+    end
+
+    context "when initialized with simple surface and needing to go quite hard up-left (-10;80)" do
+      let(:surface) { simple_surface }
+
+      let(:line) { "2510 20 0 0 1200 0 0" }
+
       it "returns the immediate move and planned route looping around curved surface" do
-        expect(call).to eq("45 4")
+        expect(call).to eq("0, 4")
 
         expect(controller.nodes_to_landing).to eq(
           [Point[2500, 100], Point[2000, 0]]

@@ -23,6 +23,11 @@ class Point
     Segment[self, other_point].length
   end
 
+  # add a transposition vector to a point to get its new location
+  def +(vector)
+    self.class[x + vector.x, y + vector.y]
+  end
+
   def ==(other)
     return false unless other.is_a?(Point)
 
@@ -78,6 +83,10 @@ class Segment
   # The direction and length when transposed to origin point. So S[P[1, 1], P[2, 3]] vector is 1, 2
   def delta_vector
     self.class[Point[0, 0], Point[dx, dy]]
+  end
+
+  def +(other)
+    self.class[Point[p1.x + other.p1.x, p1.y + other.p1.y], Point[p2.x + other.p2.x, p2.y + other.p2.y]]
   end
 
   # change in x
@@ -159,12 +168,16 @@ class Segment
       end
     else # 5678
       if dx.positive? # 78
+        return 1 if dy.zero?
+
         if dx.abs > dy.abs
           8
         else
           7
         end
       else # 56
+        return 4 if dy.zero?
+
         if dx.abs > dy.abs
           5
         else

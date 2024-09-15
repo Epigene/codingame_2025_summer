@@ -75,19 +75,19 @@ class Controller
     @direction = current_path_segment.eight_sector_angle
     debug "Need to move in direction #{direction}"
 
-    @inertia_direction = Segment.new(Point.new(0, 0), Point.new(h_speed, v_speed)).eight_sector_angle
+    @inertia_direction = Segment[Point.new(0, 0), Point.new(h_speed, v_speed)].eight_sector_angle
     debug "Inertia direction is: #{inertia_direction}"
 
-    @inertia_direction = Segment.new(Point.new(0, 0), Point.new(h_speed, v_speed.to_f - MARS_G)).eight_sector_angle
+    @inertia_direction = Segment[Point.new(0, 0), Point.new(h_speed, v_speed.to_f - MARS_G)].eight_sector_angle
     debug "Inertia direction adjusted for gravity is #{@inertia_direction}"
 
-    # breaking if excessive inertia
-    if v_speed.abs > MAX_SAFE_VERTICAL_SPEED
-      debug "UNCONTROLLED FALLING DETECTED, BREAKING!"
-      return "0 4"
-    end
-
     if _over_landing_strip = nodes_to_landing.size <= 2 && (landing_segment.p1.x..landing_segment.p2.x).include?(x)
+      # breaking if excessive inertia
+      if v_speed.abs > MAX_SAFE_VERTICAL_SPEED
+        debug "UNCONTROLLED FALLING DETECTED, BREAKING!"
+        return "0 4"
+      end
+
       landing_procedures
     else # as in keep cruisin'
       cruising_to_point(nodes_to_landing.first)
@@ -242,6 +242,19 @@ class Controller
     end
   end
 
+  # def cardinal_adjustments(inertia_vector)
+  #   {
+  #     E: current_path_segment.p1 + (inertia_vector.p2 + Point[1, 0]), # 1, E
+  #     NE: current_path_segment.p1 + (inertia_vector.p2 + Point[0.7, 0.7]), # 2, NE
+  #     N: current_path_segment.p1 + (inertia_vector.p2 + Point[0, 1]), # 3, N
+  #     NW: current_path_segment.p1 + (inertia_vector.p2 + Point[-0.7, -0.7]), # 4, NW
+  #     W: current_path_segment.p1 + (inertia_vector.p2 + Point[-1, 0]), # 5, W
+  #     SW: current_path_segment.p1 + (inertia_vector.p2 + Point[-0.7, -0.7]), # 6, SW
+  #     S: current_path_segment.p1 + (inertia_vector.p2 + Point[0, -1]), # 7, S
+  #     SE: current_path_segment.p1 + (inertia_vector.p2 + Point[0.7, -0.7]), # 8, SE
+  #   }
+  # end
+
   # @param destination [Point]
   def cruising_to_point(destination)
     debug "Not above landing strip, cruising to #{destination}"
@@ -270,7 +283,15 @@ class Controller
       end
     end
 
-    # binding.pry
+    heading_vector = current_path_segment.delta_vector.p2 # HARD LEFT
+    inertia_vector = Point.new(h_speed, v_speed.to_f - MARS_G)
+
+    if heading_vector.y.positive? # need to ascend
+      if inertia_vector.y.negative?
+        debug("Need to ascend detected")
+        return "0 4"
+      end
+    end
 
     debug("Outputting default cruise command")
     case direction
