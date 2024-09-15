@@ -8,7 +8,7 @@
 require "pry"
 
 concatenable_file_list_path = Pathname.new("./build_order.txt")
-output_path = Pathname.new("./codingame.rb")
+output_path = Pathname.new("./CODINGAME.rb")
 
 File.open(output_path, "w") do |file|
   File.readlines(concatenable_file_list_path).each do |addable_file_line|
