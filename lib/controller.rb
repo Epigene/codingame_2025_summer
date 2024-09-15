@@ -176,8 +176,20 @@ class Controller
 
     initialize_lander_location
 
+    nodes_to_landing_left = visibility_graph.dijkstra_shortest_path(current_lander_location, landing_segment.p1)
+    nodes_to_landing_right = visibility_graph.dijkstra_shortest_path(current_lander_location, landing_segment.p2)
+
+    distance_to_p1 = visibility_graph.path_length(nodes_to_landing_left)
+    distance_to_p2 = visibility_graph.path_length(nodes_to_landing_right)
+
     self.nodes_to_landing =
-      visibility_graph.dijkstra_shortest_path(current_lander_location, landing_segment.p1)[1..-1]
+      if distance_to_p1 < distance_to_p2
+        debug("Getting to landing's LEFT is shortest")
+        nodes_to_landing_left
+      else
+        debug("Getting to landing's RIGHT is shortest")
+        nodes_to_landing_right
+      end[1..-1]
 
     debug "NODES TO LANDING: #{nodes_to_landing.to_s}"
     @lander_location_initialized = true
@@ -257,6 +269,8 @@ class Controller
         return correction
       end
     end
+
+    # binding.pry
 
     debug("Outputting default cruise command")
     case direction

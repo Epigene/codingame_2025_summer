@@ -49,21 +49,23 @@ RSpec.describe Controller, instance_name: :controller do
     ]
   end
 
+  # the example is of a simple 6-point surface where the landing site is inbetween two hills
+  let(:simple_surface) do
+    [
+      Point[0, 0],
+      Point[500, 100],
+      Point[1000, 0], # landing
+      Point[2000, 0], # landing
+      Point[2500, 100],
+      Point[6999, 0],
+    ]
+  end
+
   describe "#initialize" do
     subject(:controller) { described_class.new(surface) }
 
-    # the example is of a simple 6-point surface where the landing site is inbetween two hills
     context "when given a simple surface, landing inbetween two hills" do
-      let(:surface) do
-        [
-          Point[0, 0],
-          Point[500, 100],
-          Point[1000, 0],
-          Point[2000, 0],
-          Point[2500, 100],
-          Point[6999, 0],
-        ]
-      end
+      let(:surface) { simple_surface }
 
       it "initializes the surface visibility graph and detects landing segment" do
         expect(controller.landing_segment).to eq(Segment[Point[1000, 0], Point[2000,0]])
@@ -248,16 +250,23 @@ RSpec.describe Controller, instance_name: :controller do
       end
     end
 
-    context "when initialized with test case B surface and spawn" do
-      let(:surface) { test_case_B_surface }
+    context "when initialized with simple surface and needing to go exactly left" do
+      let(:surface) { simple_surface }
 
-      let(:line) { "6500 2000 0 0 1200 0 0" } # B original spawn
+      # Point[0, 0],
+      # Point[500, 100],
+      # Point[1000, 0], # landing
+      # Point[2000, 0], # landing
+      # Point[2500, 100],
+      # Point[6999, 0],
+
+      let(:line) { "2550 100 0 0 1200 0 0" }
 
       it "returns the immediate move and planned route looping around curved surface" do
-        expect(call).to eq("22 4")
+        expect(call).to eq("45 4")
 
         expect(controller.nodes_to_landing).to eq(
-          [Point[4000, 2100], Point[3750, 1900], Point[3700, 1600], Point[3700, 220]]
+          [Point[2500, 100], Point[2000, 0]]
         )
       end
     end

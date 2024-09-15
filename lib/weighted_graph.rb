@@ -85,6 +85,19 @@ class WeightedGraph
     path
   end
 
+  # Feed in for example shortest path found to get its distance. Useful when comparing routes
+  #
+  # @param path [Array<NodeName>]
+  def path_length(path)
+    total = 0.0
+
+    path.each_cons(2) do |a, b|
+      total += structure.dig(a, b)
+    end
+
+    total
+  end
+
   private
 
   def structure

@@ -34,4 +34,20 @@ RSpec.describe WeightedGraph, instance_name: :graph do
       end
     end
   end
+
+  describe "#path_length(path)" do
+    subject(:path_length) { graph.path_length(path) }
+
+    let(:path) { ["A", "B", "C", "A"] }
+
+    before do
+      graph.connect_nodes("A", "B", 1)
+      graph.connect_nodes("B", "C", 2)
+      graph.connect_nodes("A", "C", 10)
+    end
+
+    it "returns the sum length of segments comprising the path" do
+      is_expected.to eq(13)
+    end
+  end
 end
