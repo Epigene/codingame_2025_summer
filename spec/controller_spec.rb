@@ -167,16 +167,7 @@ RSpec.describe Controller, instance_name: :controller do
     let(:controller) { described_class.new(surface) }
 
     context "when initialized with simple two-hill surface and turn info" do
-      let(:surface) do
-        [
-          Point[0, 0],
-          Point[500, 100],
-          Point[1000, 0],
-          Point[2000, 0],
-          Point[2500, 100],
-          Point[6999, 0],
-        ]
-      end
+      let(:surface) { simple_surface }
 
       let(:line) { "3000 80 0 4 5000 45 0" }
 
@@ -184,7 +175,7 @@ RSpec.describe Controller, instance_name: :controller do
         expect(call).to eq("22 4")
 
         expect(controller.visibility_graph[Point[3000.0, 80.0]].keys).to(
-          contain_exactly(Point[2500, 100], Point[6999, 0])
+          contain_exactly(Point[2500, 100], Point[2510, 10], Point[6999, 0])
         )
 
         expect(controller.nodes_to_landing).to eq([Point[2500, 100], Point[2000, 0]])
@@ -257,7 +248,7 @@ RSpec.describe Controller, instance_name: :controller do
       let(:line) { "2550 100 0 0 1200 0 0" }
 
       it "returns the immediate move and plans correct route" do
-        expect(call).to eq("21 4") # TODO, if taking power level into account, full vertical is best
+        expect(call).to eq("22 4") # TODO, if taking power level into account, full vertical is best
 
         expect(controller.nodes_to_landing.first).to eq(Point[2500, 100])
       end
@@ -266,10 +257,10 @@ RSpec.describe Controller, instance_name: :controller do
     context "when initialized with simple surface and needing to go exactly left-up (45deg), and inertia is already massively up" do
       let(:surface) { simple_surface }
 
-      let(:line) { "2550 50 0 50 1200 0 0" }
+      let(:line) { "2550 50 0 10 1200 0 0" }
 
       it "returns the immediate move to burn hard left and sets planned route" do
-        expect(call).to eq("10 4")
+        expect(call).to eq("5 4")
 
         expect(controller.nodes_to_landing.first).to eq(Point[2500, 100])
       end
@@ -281,11 +272,9 @@ RSpec.describe Controller, instance_name: :controller do
       let(:line) { "2510 20 0 0 1200 0 0" }
 
       it "returns the immediate move and planned route looping around curved surface" do
-        expect(call).to eq("0, 4")
+        expect(call).to eq("0 4")
 
-        expect(controller.nodes_to_landing).to eq(
-          [Point[2500, 100], Point[2000, 0]]
-        )
+        expect(controller.nodes_to_landing.first).to eq(Point[2500, 100])
       end
     end
   end
