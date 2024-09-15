@@ -83,6 +83,10 @@ class Controller
     @inertia_direction = Segment[Point.new(0, 0), Point.new(h_speed, v_speed.to_f - MARS_G)].eight_sector_angle
     debug "Inertia direction adjusted for gravity is #{@inertia_direction}"
 
+    if nodes_to_landing.size < 2
+      switch_to_targeting_closest_safe_landing
+    end
+
     if _over_landing_strip = nodes_to_landing.size < 2 && (landing_segment.p1.x..landing_segment.p2.x).include?(x)
       # breaking if excessive inertia
       if v_speed.abs > MAX_SAFE_VERTICAL_SPEED
@@ -244,22 +248,14 @@ class Controller
     end
   end
 
-  # def cardinal_adjustments(inertia_vector)
-  #   {
-  #     E: current_path_segment.p1 + (inertia_vector.p2 + Point[1, 0]), # 1, E
-  #     NE: current_path_segment.p1 + (inertia_vector.p2 + Point[0.7, 0.7]), # 2, NE
-  #     N: current_path_segment.p1 + (inertia_vector.p2 + Point[0, 1]), # 3, N
-  #     NW: current_path_segment.p1 + (inertia_vector.p2 + Point[-0.7, -0.7]), # 4, NW
-  #     W: current_path_segment.p1 + (inertia_vector.p2 + Point[-1, 0]), # 5, W
-  #     SW: current_path_segment.p1 + (inertia_vector.p2 + Point[-0.7, -0.7]), # 6, SW
-  #     S: current_path_segment.p1 + (inertia_vector.p2 + Point[0, -1]), # 7, S
-  #     SE: current_path_segment.p1 + (inertia_vector.p2 + Point[0.7, -0.7]), # 8, SE
-  #   }
-  # end
-
   # @param destination [Point]
   def cruising_to_point(destination)
     debug "Not above landing strip, cruising to #{destination}"
+
+    if v_speed.negative? && v_speed.abs > MAX_SAFE_VERTICAL_SPEED
+      debug "UNCONTROLLED FALLING DETECTED, BREAKING!"
+      return "0 4"
+    end
 
     unless h_speed.abs < MAX_SAFE_HORIZONTAL_SPEED
       # breaking based on inertia and estimated break path
@@ -297,11 +293,11 @@ class Controller
 
     if direction == inertia_direction
       if direction == 6
-        debug("Doing controlled descent to the right")
-        return "-30 4"
-      elsif direction == 7
         debug("Doing controlled descent to the left")
-        return "30 4"
+        return "0 1"
+      elsif direction == 7
+        debug("Doing controlled descent to the right")
+        return "0 1"
       end
     end
 
@@ -326,5 +322,23 @@ class Controller
     else
       raise("Unkown direction")
     end
+  end
+
+  def switch_to_targeting_closest_safe_landing
+    return if @switched_to_targeting_closest_safe_landing
+
+    safe_left_side = Point[landing_segment.p1.x+50, landing_segment.p1.y]
+    safe_right_side = Point[landing_segment.p2.x-50, landing_segment.p2.y]
+
+    @nodes_to_landing =
+      if current_lander_location.distance_to(safe_left_side) < current_lander_location.distance_to(safe_right_side)
+        [safe_left_side]
+      else
+        [safe_right_side]
+      end
+
+    debug("SWITCHED OVER to landing point at #{nodes_to_landing.first}")
+
+    @switched_to_targeting_closest_safe_landing = true
   end
 end

@@ -284,9 +284,9 @@ RSpec.describe Controller, instance_name: :controller do
       let(:line) { "3431 2174 7 -16 654 -60 4" }
 
       it "returns the immediate command not to go crazy with horizontal movement" do
-        expect(call).to eq("30 4")
+        expect(call).to eq("0 1")
 
-        expect(controller.nodes_to_landing).to eq([Point[3700, 220]])
+        expect(controller.nodes_to_landing).to eq([Point[3750, 220]])
       end
     end
   end
