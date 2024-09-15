@@ -178,7 +178,7 @@ RSpec.describe Controller, instance_name: :controller do
       let(:line) { "3000 80 0 4 5000 45 0" }
 
       it "returns the immediate comand, and sets a long-term node-path to landing" do
-        expect(call).to eq("30 4")
+        expect(call).to eq("22 4")
 
         expect(controller.visibility_graph[Point[3000.0, 80.0]].keys).to(
           contain_exactly(Point[2500, 100], Point[6999, 0])
@@ -225,7 +225,7 @@ RSpec.describe Controller, instance_name: :controller do
       end
 
       it "returns immediate move and drops the P[5500, 1500] node from :nodes_to_landing as reached because lander can see the next node" do
-        expect(call).to eq("30 4")
+        expect(call).to eq("22 4")
 
         expect(controller.nodes_to_landing).to eq(
           [Point[5000, 1550], Point[4500, 1450], Point[2200, 150]]
@@ -254,7 +254,7 @@ RSpec.describe Controller, instance_name: :controller do
       let(:line) { "6500 2000 0 0 1200 0 0" } # B original spawn
 
       it "returns the immediate move and planned route looping around curved surface" do
-        expect(call).to eq("30 4")
+        expect(call).to eq("22 4")
 
         expect(controller.nodes_to_landing).to eq(
           [Point[4000, 2100], Point[3750, 1900], Point[3700, 1600], Point[3700, 220]]

@@ -5,6 +5,7 @@ class Controller
   MAX_Y = 2999 # meters
   MINUMIM_LANDING_WIDTH = 1000 # m
 
+  MARS_G = 3.711 # m/s^2
   MAX_SAFE_HORIZONTAL_CRUISE_SPEED = 50 # ms
   MAX_SAFE_VERTICAL_CRUISE_SPEED = 8 # ms
   MAX_SAFE_HORIZONTAL_SPEED = 19 # m/s
@@ -76,6 +77,9 @@ class Controller
 
     @inertia_direction = Segment.new(Point.new(0, 0), Point.new(h_speed, v_speed)).eight_sector_angle
     debug "Inertia direction is: #{inertia_direction}"
+
+    @inertia_direction = Segment.new(Point.new(0, 0), Point.new(h_speed, v_speed.to_f - MARS_G)).eight_sector_angle
+    debug "Inertia direction adjusted for gravity is #{@inertia_direction}"
 
     # breaking if excessive inertia
     if v_speed.abs > MAX_SAFE_VERTICAL_SPEED
@@ -257,13 +261,13 @@ class Controller
     debug("Outputting default cruise command")
     case direction
     when 1
-      "-30 4"
+      "-22 4" # 22 degrees because given MARS_G and max thrust of 4 it's the breakeven angle
     when 2
       "-5 4"
     when 3
       "5 4"
     when 4
-      "30 4"
+      "22 4"
     when 5
       "45 4"
     when 6 # need to descend
