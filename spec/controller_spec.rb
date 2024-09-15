@@ -277,5 +277,17 @@ RSpec.describe Controller, instance_name: :controller do
         expect(controller.nodes_to_landing.first).to eq(Point[2500, 100])
       end
     end
+
+    context "when initialized with test case B surface and should descend in a controlled manner" do
+      let(:surface) { test_case_B_surface }
+
+      let(:line) { "3431 2174 7 -16 654 -60 4" }
+
+      it "returns the immediate command not to go crazy with horizontal movement" do
+        expect(call).to eq("30 4")
+
+        expect(controller.nodes_to_landing).to eq([Point[3700, 220]])
+      end
+    end
   end
 end

@@ -9,7 +9,7 @@ class Controller
   MAX_SAFE_HORIZONTAL_CRUISE_SPEED = 50 # ms
   MAX_SAFE_VERTICAL_CRUISE_SPEED = 8 # ms
   MAX_SAFE_HORIZONTAL_SPEED = 19 # m/s
-  MAX_SAFE_VERTICAL_SPEED = 39 # m/s # 40 in rules, but it's too unsafe
+  MAX_SAFE_VERTICAL_SPEED = 36 # m/s # 40 in rules, but it's too unsafe
 
   RIGHT_DIRECTIONS = [1, 2, 7, 8].to_set.freeze
   LEFT_DIRECTIONS = [3, 4, 5, 6].to_set.freeze
@@ -66,6 +66,8 @@ class Controller
     initialize_original_route
     remove_reached_node
 
+    debug("Remaining path nodes: #{nodes_to_landing}")
+
     @current_path_segment = Segment[current_lander_location, nodes_to_landing.first]
 
     # given that the lander can't change settings dramatically, there's only a limited number of "moves":
@@ -81,7 +83,7 @@ class Controller
     @inertia_direction = Segment[Point.new(0, 0), Point.new(h_speed, v_speed.to_f - MARS_G)].eight_sector_angle
     debug "Inertia direction adjusted for gravity is #{@inertia_direction}"
 
-    if _over_landing_strip = nodes_to_landing.size <= 2 && (landing_segment.p1.x..landing_segment.p2.x).include?(x)
+    if _over_landing_strip = nodes_to_landing.size < 2 && (landing_segment.p1.x..landing_segment.p2.x).include?(x)
       # breaking if excessive inertia
       if v_speed.abs > MAX_SAFE_VERTICAL_SPEED
         debug "UNCONTROLLED FALLING DETECTED, BREAKING!"
@@ -290,6 +292,16 @@ class Controller
       if inertia_vector.y.negative?
         debug("Need to ascend detected")
         return "0 4"
+      end
+    end
+
+    if direction == inertia_direction
+      if direction == 6
+        debug("Doing controlled descent to the right")
+        return "-30 4"
+      elsif direction == 7
+        debug("Doing controlled descent to the left")
+        return "30 4"
       end
     end
 
