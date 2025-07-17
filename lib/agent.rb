@@ -1,6 +1,7 @@
 # Encapsulates Splashing agent-related logic
 class Agent
-  attr_reader :id, :player, :cd, :optimal_range, :power, :bombs
+  attr_reader :id, :player, :optimal_range, :power, :bombs, :xy
+  attr_accessor :cd, :bombs, :wetness
 
   # def initialize(id:, player:, cd:, optimal_range:, power:, bombs:)
   def initialize(line)
@@ -12,5 +13,23 @@ class Agent
     # @optimal_range = optimal_range
     # @power = power
     # @bombs = bombs
+  end
+
+  def assign_attributes(**attrs)
+    attrs.each_pair do |k, v|
+      send("#{k}=", v)
+    end
+  end
+
+  def xy=(v)
+    @xy = v
+  end
+
+  def x
+    xy.x
+  end
+
+  def y
+    xy.y
   end
 end
