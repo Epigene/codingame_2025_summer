@@ -9,20 +9,14 @@ loop do
     # wetness: Damage (0-100) this agent has taken
     line = gets
     debug line
-    agent_id, x, y, cooldown, splash_bombs, wetness = gets.split.map { |x| x.to_i }
-    agents[agent_id] = {
-      id: agent_id,
-      x: x,
-      y: y,
-      cd: cooldown,
-      bombs: splash_bombs,
-      wetness: wetness,
-    }
+    # agent_id, x, y, cooldown, splash_bombs, wetness = line.split.map { |x| x.to_i }
+    agent_id = line.split.first.to_i
+    agents[agent_id] = line
   end
 
   my_agent_count = gets.to_i # Number of alive agents controlled by you
 
-  Controller.call(agent_update: agents, my_agent_count: my_agent_count).each do |move|
+  @controller.call(agent_update: agents, my_agent_count: my_agent_count).each do |move|
     puts move
   end
 end

@@ -2,4 +2,5 @@
 
 require "requires"
 require "grid"
+require "agent"
 require "controller"

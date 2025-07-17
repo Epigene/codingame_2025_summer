@@ -2,6 +2,7 @@
 
 # == GAME INIT ==
 my_id = gets.to_i # Your player id (0 or 1)
+debug "My id: #{my_id}"
 agent_data_count = gets.to_i # Total number of agents in the game
 agents = {}
 agent_data_count.times do
@@ -13,30 +14,28 @@ agent_data_count.times do
   # splash_bombs: Number of splash bombs this can throw this game
   line = gets
   debug line
-  agent_id, player, shoot_cooldown, optimal_range, soaking_power, splash_bombs = line.split.map { |x| x.to_i }
-  agents[agent_id] = Agent.new(
-    id: agent_id,
-    player: player,
-    cd: shoot_cooldown,
-    optimal_range: optimal_range,
-    power: soaking_power,
-    bombs: splash_bombs
-  )
+  # agent_id, player, shoot_cooldown, optimal_range, soaking_power, splash_bombs = line.split.map { |x| x.to_i }
+  # agents[agent_id] = Agent.new(
+  #   id: agent_id,
+  #   player: player,
+  #   cd: shoot_cooldown,
+  #   optimal_range: optimal_range,
+  #   power: soaking_power,
+  #   bombs: splash_bombs
+  # )
+  agent_id = line.split.first.to_i
+  agents[agent_id] = Agent.new(line)
 end
 
 # width: Width of the game map
 # height: Height of the game map
 width, height = gets.split.map(&:to_i)
+field_lines = []
 height.times do
-  inputs = gets.split
-  debug inputs ##
-  for j in 0..(width-1)
-    # x: X coordinate, 0 is left edge
-    # y: Y coordinate, 0 is top edge
-    x = inputs[3*j].to_i
-    y = inputs[3*j+1].to_i
-    tile_type = inputs[3*j+2].to_i
-  end
+  line = gets
+  debug line
+  field_lines << line
 end
+field = field_lines.join("\n")
 
-@controller = Controller.new(my_id: my_id, agents: agents)
+@controller = Controller.new(my_id: my_id, agents: agents, field: field)
