@@ -1,14 +1,13 @@
 # Condinbot
 Not a gem! A sandbox where to develop bots for codingame in TDD manner, in separate, testable files.
-This one is a solition for Mars Lander 3 (and by extension 2 and 1).
-Here's a graceful replay https://www.codingame.com/replay/802656694
+This one is a solition for Codingame 2025 Summer challenge (flame dousing)
 
 ## Use
 1. Place files in `lib/`, and require them in `lib/codinbot.rb` like you normally would.
 2. Write specs in `spec/`
 3. Configure `build_order.txt` contents.
   3.1 `requires.rb`, `game_init.rb`, and `game_loop.rb` will be necessary for all bots
-  3.2 `graph.rb` often is useful for 2d cell-based navigation
+  3.2 `grid.rb` often is useful for 2d cell-based navigation
 4. When you're ready to sync to codingame, run `$ ruby codingame_concatenator.rb`
 
 ## License

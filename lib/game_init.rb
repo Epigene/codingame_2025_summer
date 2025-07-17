@@ -1,14 +1,42 @@
 # Put the one-time game setup code that comes before `loop do` here.
 
 # == GAME INIT ==
-@surface_n = gets.to_i # the number of points used to draw the surface of Mars.
-@surface_points = []
-
-@surface_n.times do
-  land_x, land_y = gets.split(" ").map(&:to_i)
-  point = Point[land_x, land_y]
-  debug point.to_s
-  @surface_points << point
+my_id = gets.to_i # Your player id (0 or 1)
+agent_data_count = gets.to_i # Total number of agents in the game
+agents = {}
+agent_data_count.times do
+  # agent_id: Unique identifier for this agent
+  # player: Player id of this agent
+  # shoot_cooldown: Number of turns between each of this agent's shots
+  # optimal_range: Maximum manhattan distance for greatest damage output
+  # soaking_power: Damage output within optimal conditions
+  # splash_bombs: Number of splash bombs this can throw this game
+  line = gets
+  debug line
+  agent_id, player, shoot_cooldown, optimal_range, soaking_power, splash_bombs = line.split.map { |x| x.to_i }
+  agents[agent_id] = Agent.new(
+    id: agent_id,
+    player: player,
+    cd: shoot_cooldown,
+    optimal_range: optimal_range,
+    power: soaking_power,
+    bombs: splash_bombs
+  )
 end
 
-controller = Controller.new(@surface_points)
+# width: Width of the game map
+# height: Height of the game map
+width, height = gets.split.map(&:to_i)
+height.times do
+  inputs = gets.split
+  debug inputs ##
+  for j in 0..(width-1)
+    # x: X coordinate, 0 is left edge
+    # y: Y coordinate, 0 is top edge
+    x = inputs[3*j].to_i
+    y = inputs[3*j+1].to_i
+    tile_type = inputs[3*j+2].to_i
+  end
+end
+
+@controller = Controller.new(my_id: my_id, agents: agents)

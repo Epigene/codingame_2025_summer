@@ -1,293 +1,245 @@
 RSpec.describe Controller, instance_name: :controller do
-  let(:test_case_A_surface) do
-    [
-      Point[0, 450],
-      Point[300, 750],
-      Point[1000, 450],
-      Point[1500, 650],
-      Point[1800, 850],
-      Point[2000, 1950],
-      Point[2200, 1850],
-      Point[2400, 2000],
-      Point[3100, 1800],
-      Point[3150, 1550],
-      Point[2500, 1600],
-      Point[2200, 1550],
-      Point[2100, 750],
-      Point[2200, 150], # landing
-      Point[3200, 150], # landing
-      Point[3500, 450],
-      Point[4000, 950],
-      Point[4500, 1450],
-      Point[5000, 1550],
-      Point[5500, 1500],
-      Point[6000, 950],
-      Point[6999, 1750],
-    ]
-  end
+  let(:controller) { described_class.new }
 
-  let(:test_case_B_surface) do
-    [
-      Point[0, 1800],
-      Point[300, 1200],
-      Point[1000, 1550],
-      Point[2000, 1200],
-      Point[2500, 1650],
-      Point[3700, 220], # landing
-      Point[4700, 220], # landing
-      Point[4750, 1000],
-      Point[4700, 1650],
-      Point[4000, 1700],
-      Point[3700, 1600], # curve spike above landing
-      Point[3750, 1900], # curve hump 1
-      Point[4000, 2100], # curve hump 2
-      Point[4900, 2050], # curve hump 3
-      Point[5100, 1000],
-      Point[5500, 500],
-      Point[6200, 800],
-      Point[6999, 600]
-    ]
-  end
+  describe "#call(n)" do
+    subject(:call) { controller.call(n) }
 
-  # the example is of a simple 6-point surface where the landing site is inbetween two hills
-  let(:simple_surface) do
-    [
-      Point[0, 0],
-      Point[500, 100],
-      Point[1000, 0], # landing
-      Point[2000, 0], # landing
-      Point[2500, 100],
-      Point[2510, 10],
-      Point[6999, 0],
-    ]
-  end
+    context "when n is 1" do
+      let(:n) { 1 }
 
-  describe "#initialize" do
-    subject(:controller) { described_class.new(surface) }
-
-    context "when given a simple surface, landing inbetween two hills" do
-      let(:surface) { simple_surface }
-
-      it "initializes the surface visibility graph and detects landing segment" do
-        expect(controller.landing_segment).to eq(Segment[Point[1000, 0], Point[2000,0]])
-
-        expect(controller.visibility_graph[Point[0, 0]].keys).to contain_exactly(Point[500, 100])
-
-        expect(controller.visibility_graph.dijkstra_shortest_path(Point[0, 0], Point[6999, 0])).to eq(
-          [Point[0, 0], Point[500, 100], Point[2500, 100], Point[6999, 0]]
-        )
-      end
+      it { is_expected.to eq(0) }
     end
 
-    context "when given a tricky surface with a sharp overhang cliff" do
-      let(:surface) do
-        [
-          Point[0, 0],
-          Point[4000, 2000],
-          Point[3800, 1800],
-          Point[3800, 100],
-          Point[4800, 100],
-          Point[6999, 500]
-        ]
-      end
+    context "when n is 2" do
+      let(:n) { 2 }
 
-      it "initializes the surface visibility graph and detects landing segment", :aggregate_failures do
-        expect(controller.landing_segment).to eq(Segment[Point[3800, 100], Point[4800, 100]])
-
-        expect(controller.visibility_graph[Point[0, 0]].keys).to contain_exactly(Point[4000, 2000])
-        expect(controller.visibility_graph[Point[6999, 500]].keys).to(
-          contain_exactly(Point[4000, 2000], Point[3800, 1800], Point[3800, 100], Point[4800, 100])
-        )
-
-        expect(controller.visibility_graph.dijkstra_shortest_path(Point[0, 0], Point[3800, 100])).to eq(
-          [Point[0, 0], Point[4000, 2000], Point[3800, 100]]
-        )
-      end
+      it { is_expected.to eq(0) }
     end
 
-    context "when given a tricky surface with blocky overhang" do
-      let(:surface) do
-        [
-          Point[0, 0],
-          Point[2000, 2000],
-          Point[3000, 1900],
-          Point[4000, 2000],
-          Point[4000, 1500],
-          Point[3500, 1500],
-          Point[3500, 100],
-          Point[4500, 100],
-          Point[6999, 10],
-        ]
-      end
+    context "when n is 3" do
+      let(:n) { 3 }
 
-      it "initializes the surface visibility graph and detects landing segment", :aggregate_failures do
-        expect(controller.landing_segment).to eq(Segment[Point[3500, 100], Point[4500, 100]])
-
-        expect(controller.visibility_graph[Point[0, 0]].keys).to contain_exactly(Point[2000, 2000])
-        expect(controller.visibility_graph[Point[2000, 2000]].keys).to(
-          contain_exactly(Point[0, 0], Point[3000, 1900], Point[4000, 2000])
-        )
-
-        expect(controller.visibility_graph.dijkstra_shortest_path(Point[0, 0], Point[3500, 100])).to eq(
-          [Point[0, 0], Point[2000, 2000], Point[4000, 2000], Point[4000, 1500], Point[3500, 100]]
-        )
-      end
+      it { is_expected.to eq(1) }
     end
 
-    context "when given a sneaky surface with points resulting in a straight-line terrain" do
-      let(:surface) do
-        [
-          Point[0, 0],
-          Point[100, 100], # redundant because subsumed under neighbors
-          Point[200, 200],
-          Point[1000, 1200], # landing
-          Point[2000, 1200], # landing
-          Point[3000, 950], # redundant because subsumed
-          Point[4000, 700], # redundant because subsumed
-          Point[6000, 200],
-          Point[6999, 0],
-        ]
-      end
+    context "when n is 4" do
+      let(:n) { 4 }
 
-      it "discards the excess points and initializes a simpler surface visibility graph" do
-        expect(controller.landing_segment).to eq(Segment[Point[1000, 1200], Point[2000, 1200]])
+      it { is_expected.to eq(1) }
+    end
 
-        expect(controller.visibility_graph[Point[0, 0]].keys).to contain_exactly(Point[200, 200], Point[1000, 1200])
+    context "when n is 5" do
+      let(:n) { 5 }
 
-        expect(controller.visibility_graph.dijkstra_shortest_path(Point[0, 0], Point[6999, 0])).to eq(
-          [Point[0, 0], Point[1000, 1200], Point[2000, 1200], Point[6999, 0]]
-        )
-      end
+      it { is_expected.to eq(2) }
+    end
+
+    context "when n is 6" do
+      let(:n) { 6 }
+
+      it { is_expected.to eq(3) }
+    end
+
+    context "when n is 10" do
+      let(:n) { 10 }
+
+      it { is_expected.to eq(9) }
+    end
+
+    context "when n is 12" do
+      let(:n) { 12 }
+
+      it { is_expected.to eq(14) }
+    end
+
+    context "when n is 14, a special case where it's 1 shy from a full 5-column stair, so has 4 'excess' bricks" do
+      let(:n) { 14 }
+
+      it { is_expected.to eq(21) }
+    end
+
+    context "when n is 25" do
+      let(:n) { 25 }
+
+      it { is_expected.to eq(141) }
+    end
+
+    context "when n is 27" do
+      let(:n) { 27 }
+
+      it { is_expected.to eq(191) }
+    end
+
+    context "when n is 70" do
+      let(:n) { 70 }
+
+      it { is_expected.to eq(29926) }
+    end
+
+    context "when n is 90" do
+      let(:n) { 90 }
+
+      # ORIG time | 3.01 seconds (files took 0.23623 seconds to load)
+      # with combined last two column combo counting | 1.17 seconds (files took 0.23095 seconds to load)
+      # stop dupping steps array | 0.80186 seconds (files took 0.22733 seconds to load)
+      # with quick-step in level increase | 0.7528 seconds (files took 0.22712 seconds to load)
+      it { is_expected.to eq(189585) }
+    end
+
+    context "when n is 100" do
+      let(:n) { 100 }
+
+      # ORIG time (with quick-step in level) | 1.75 seconds (files took 0.22669 seconds to load)
+      # in-place step mod 1 | 1.68 seconds (files took 0.22725 seconds to load)
+      # in-place step mod 2 | 1.55 seconds (files took 0.22722 seconds to load)
+      # without debug output | 0.48621 seconds (files took 0.2342 seconds to load)
+      it { is_expected.to eq(444792) }
+    end
+
+    context "when n is 120" do
+      let(:n) { 120 }
+
+      # without debug output | 2.34 seconds (files took 0.23288 seconds to load)
+      it { is_expected.to eq(2_194_431) }
+    end
+
+    context "when n is 500" do
+      let(:n) { 500 }
+
+      it { is_expected.to eq(732_986_521_245_023) }
     end
   end
 
-  describe "#call(line)" do
-    subject(:call) { controller.call(line) }
+  describe "#steps_in_n_columns(steps, columns)" do
+    subject(:steps_in_n_columns) { controller.steps_in_n_columns(steps, columns) }
 
-    let(:controller) { described_class.new(surface) }
+    context "when given a simple mini-case" do
+      let(:steps) { [1, 2] }
+      let(:columns) { 2 }
 
-    context "when initialized with simple two-hill surface and turn info" do
-      let(:surface) { simple_surface }
-
-      let(:line) { "3000 80 0 4 5000 45 0" }
-
-      it "returns the immediate comand, and sets a long-term node-path to landing" do
-        expect(call).to eq("22 4")
-
-        expect(controller.visibility_graph[Point[3000.0, 80.0]].keys).to(
-          contain_exactly(Point[2500, 100], Point[2510, 10], Point[6999, 0])
-        )
-
-        expect(controller.nodes_to_landing).to eq([Point[2500, 100], Point[2000, 0]])
-      end
+      it { is_expected.to eq(1) }
     end
 
-    context "when initialized with test case A terrain and starting location" do
-      let(:surface) { test_case_A_surface }
+    context "when given an end-game case with last column having excess" do
+      let(:steps) { [1, 6] }
+      let(:columns) { 2 }
 
-      let(:line) { "6500 2600 -20 0 1000 45 0" }
-
-      it "returns the immediate move and sets up path to landing" do
-        expect(call).to eq("45 4")
-
-        expect(controller.nodes_to_landing).to eq([Point[4500, 1450], Point[3200, 150]])
-      end
+      it { is_expected.to eq(3) }
     end
 
-    context "when initialized with test case A terrain in the rightmost canyon" do
-      let(:surface) { test_case_A_surface }
+    context "when given an end-game case with last column having excess" do
+      let(:steps) { [1, 7] }
+      let(:columns) { 2 }
 
-      let(:line) { "6000, 1000 -57 -8 846 -7 4" }
-
-      it "returns immediate move and calculates nodes_to_landing" do
-        expect(call).to eq("-22 4")
-
-        expect(controller.nodes_to_landing).to eq(
-          [Point[5500, 1500], Point[5000, 1550], Point[4500, 1450], Point[3200, 150]]
-        )
-      end
+      it { is_expected.to eq(3) }
     end
 
-    context "when initialized with test case A terrain just outside and to the left of the the rightmost canyon" do
-      let(:surface) { test_case_A_surface }
+    context "when given an end-game case with last column having excess" do
+      let(:steps) { [5, 6] }
+      let(:columns) { 2 }
 
-      let(:line) { "5500, 1501 0 0 846 -7 4" }
-      let(:original_spawn_line) { "6000, 1000 -57 -8 846 -7 4" }
-
-      before do
-        controller.call(original_spawn_line)
-      end
-
-      it "returns immediate move and drops the P[5500, 1500] node from :nodes_to_landing as reached because lander can see the next node" do
-        expect(call).to eq("0 4")
-
-        expect(controller.nodes_to_landing).to eq(
-          [Point[5000, 1550], Point[4500, 1450], Point[3200, 150]]
-        )
-      end
+      it { is_expected.to eq(1) }
     end
 
-    context "when initialized with test case A surface and should start lowering (inertia 5 to direction 6)" do
-      let(:surface) { test_case_A_surface }
+    context "when given an mid-game case with last column having no excess" do
+      let(:steps) { [1, 2, 3] }
+      let(:columns) { 3 }
 
-      let(:line) { "4148 2252 -66 -7 826 -7 4" }
-      let(:original_spawn_line) { "6500 2600 -20 0 1000 45 0" }
-
-      before do
-        controller.call(original_spawn_line)
-      end
-
-      it "returns immediate move to shut off engines and get more positive Y (falling from gravity)" do
-        expect(call).to eq("-60 4")
-      end
+      it { is_expected.to eq(1) }
     end
 
-    context "when initialized with simple surface and needing to go exactly left" do
-      let(:surface) { simple_surface }
+    context "when given an mid-game case with last column having excess" do
+      let(:steps) { [1, 2, 7] }
+      let(:columns) { 3 }
 
-      let(:line) { "2550 100 0 0 1200 0 0" }
-
-      it "returns the immediate move and plans correct route" do
-        expect(call).to eq("22 4") # TODO, if taking power level into account, full vertical is best
-
-        expect(controller.nodes_to_landing.first).to eq(Point[2500, 100])
-      end
+      it { is_expected.to eq(4) }
     end
 
-    context "when initialized with simple surface and needing to go exactly left-up (45deg), and inertia is already massively up" do
-      let(:surface) { simple_surface }
+    context "when given an early-game case with last column having a large excess" do
+      let(:steps) { [1, 2, 15] }
+      let(:columns) { 3 }
 
-      let(:line) { "2550 50 0 10 1200 0 0" }
+      it { is_expected.to eq(19) }
+    end
+  end
 
-      it "returns the immediate move to burn hard left and sets planned route" do
-        expect(call).to eq("5 4")
+  describe "#non_decreasing_partitions_v2(n, c)" do
+    subject(:non_decreasing_partitions_v2) { controller.non_decreasing_partitions_v2(*args) }
 
-        expect(controller.nodes_to_landing.first).to eq(Point[2500, 100])
-      end
+    context "when asked to put 4 bricks in 4 columns in a non-decreasing way" do
+      let(:args) { [4, 4] }
+
+      it { is_expected.to eq(5) }
     end
 
-    context "when initialized with simple surface and needing to go quite hard up-left (-10;80)" do
-      let(:surface) { simple_surface }
+    context "when asked to put 3 bricks in 2 columns in a non-decreasing way" do
+      let(:args) { [3, 2] }
 
-      let(:line) { "2510 20 0 0 1200 0 0" }
-
-      it "returns the immediate move and planned route looping around curved surface" do
-        expect(call).to eq("0 4")
-
-        expect(controller.nodes_to_landing.first).to eq(Point[2500, 100])
-      end
+      it { is_expected.to eq(2) }
     end
 
-    context "when initialized with test case B surface and should descend in a controlled manner" do
-      let(:surface) { test_case_B_surface }
+    context "when asked to put 5 bricks in 3 columns in a non-decreasing way" do
+      let(:args) { [5, 3] }
 
-      let(:line) { "3431 2174 7 -16 654 -60 4" }
+      it { is_expected.to eq(5) }
+    end
 
-      it "returns the immediate command not to go crazy with horizontal movement" do
-        expect(call).to eq("0 1")
+    context "when asked to put 5 bricks in 5 columns in a non-decreasing way" do
+      let(:args) { [5, 5] }
 
-        expect(controller.nodes_to_landing).to eq([Point[3750, 220]])
-      end
+      it { is_expected.to eq(7) }
+    end
+
+    context "when asked to put 500 bricks in 3 columns in a non-decreasing way" do
+      let(:args) { [500, 3] }
+
+      it { is_expected.to eq(21084) }
+    end
+  end
+
+  describe "#unique_partitions(n, c)" do
+    subject(:unique_partitions) { controller.unique_partitions(*args) }
+
+    context "when asked to put 4 bricks in exactly 1 columns" do
+      let(:args) { [4, 1] }
+
+      it { is_expected.to eq(1) }
+    end
+
+    context "when asked to put 4 bricks in exactly 2 columns" do
+      let(:args) { [4, 2] }
+
+      it { is_expected.to eq(2) }
+    end
+
+    context "when asked to put 4 bricks in exactly 3 columns" do
+      let(:args) { [4, 3] }
+
+      it { is_expected.to eq(1) }
+    end
+
+    context "when asked to put 4 bricks in exactly 4 columns" do
+      let(:args) { [4, 4] }
+
+      it { is_expected.to eq(1) }
+    end
+
+    context "when asked to put 3 bricks in exactly 2 columns" do
+      let(:args) { [3, 2] }
+
+      it { is_expected.to eq(1) }
+    end
+
+    context "when asked to put 4 bricks in exactly 3 columns" do
+      let(:args) { [4, 3] }
+
+      it { is_expected.to eq(1) }
+    end
+
+    context "when asked to put 1 brick in exactly 2 columns" do
+      let(:args) { [1, 2] }
+
+      it { is_expected.to eq(0) }
     end
   end
 end
