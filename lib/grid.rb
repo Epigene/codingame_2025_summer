@@ -1,10 +1,11 @@
 # Implements a cell-based Grid - a special sub-type of a directionless and weightless graph structure.
-# Node IDs are [X, Y] Point objects.
-# [0, 0] origin is assumed to be in the upper left, [1, 1] is to the lower right of it.
+# Node IDs are "x y" String objects monkeypatched to respond to #x and #y.
+# "0 0" origin is assumed to be in the upper left, "1 1" is to the lower right of it.
 # Allows special concepts like "row", "column", "straight line along a row/column", and "diagonally".
 #
 # Initialization gives you an empty grid. Use #add_cell to populate the grid. By default the new
-# cell will be connected to all four neighbour cells. Use kwargs to :except or :only needed connections.
+# cell will be connected to all four neighbour cells and . Use kwargs to :except or :only needed connections.
+# Use `add_cell( trim_excess: false)` to opt out of 'outside bounds auto-trim'
 class Grid
   # Key data storage.
   # Each key is a node (key == name),
@@ -54,7 +55,7 @@ class Grid
   # @param point Point
   # @param except Array<neighbor>
   # @param only Array<neighbor>
-  def add_cell(point, except: nil, only: nil)
+  def add_cell(point, except: nil, only: nil, auto_trim: true)
     raise ArgumentError.new("Only one of :except or :only kwards is supported") if !except.nil? && !only.nil?
 
     neighbors = NEIGHBORS.dup
@@ -67,8 +68,17 @@ class Grid
 
     raise ArgumentError.new(":except/:only use made a cell have no neighbors") if neighbors.none?
 
+    structure[point] ||= Set.new
+
     neighbors.each do |neighbor|
-      neighbor = Point[point.x + neighbor.first, point.y + neighbor.last]
+      neighbor = "#{point.x + neighbor.first} #{point.y + neighbor.last}"
+
+      if auto_trim
+        next if neighbor.x.negative?
+        next if neighbor.y.negative?
+        next if neighbor.x > width - 1
+        next if neighbor.y > height - 1
+      end
 
       structure[point] << neighbor
       structure[neighbor] << point
