@@ -32,7 +32,7 @@ end
 width, height = gets.split.map(&:to_i)
 field_lines = []
 height.times do
-  line = gets
+  line = gets.chomp
   debug line
   field_lines << line
 end
