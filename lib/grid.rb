@@ -19,9 +19,19 @@ class Grid
     W = [-1, 0].freeze, # West
   ].freeze
 
+  DIAGONALS = [
+    NW = [-1, -1],
+    NE = [1, -1],
+    SW = [-1, 1],
+    SE = [1, 1]
+  ].freeze
+
+  N8 = (NEIGHBORS + DIAGONALS).freeze
+
   attr_reader :width, :height
 
-  def initialize(width, height)
+  # @param fill Boolean # whether to run naive structure fillout
+  def initialize(width, height, fill: false)
     @width = width
     @height = height
 
@@ -29,6 +39,22 @@ class Grid
       Hash.new do |hash, key|
         hash[key] = Set.new
       end
+
+    if fill
+      width.times do |x|
+        height.times do |y|
+          add_cell("#{x} #{y}")
+        end
+      end
+    end
+  end
+
+  def max_x
+    width - 1
+  end
+
+  def max_y
+    height - 1
   end
 
   # Returns a new
@@ -73,18 +99,20 @@ class Grid
     neighbors.each do |neighbor|
       neighbor = "#{point.x + neighbor.first} #{point.y + neighbor.last}"
 
-      if auto_trim
-        next if neighbor.x.negative?
-        next if neighbor.y.negative?
-        next if neighbor.x > width - 1
-        next if neighbor.y > height - 1
-      end
+      next if auto_trim && cell_outside_norms?(neighbor)
 
       structure[point] << neighbor
       structure[neighbor] << point
     end
 
     nil
+  end
+
+  def cell_outside_norms?(cell)
+    cell.x.negative? ||
+    cell.y.negative? ||
+    cell.x > width - 1 ||
+    cell.y > height - 1
   end
 
   # Removes a list of cells and any connections to it from the neighbors
@@ -157,15 +185,29 @@ class Grid
   end
 
   # @return Integer
-  def mahattan_distance(pointA, pointB)
-    (pointA.x - pointB.x).abs + (pointA.y - pointB.y).abs
+  def manhattan_distance(pointA, pointB)
+    @manhattan_distances ||= {}
+    key = "#{pointA}_#{pointB}"
+    @manhattan_distances[key] ||= (pointA.x - pointB.x).abs + (pointA.y - pointB.y).abs
   end
 
-  def mahattan_distance_from_mid(point)
+  def manhattan_distance_from_mid(point)
     closest_mid_x = width.odd? ? (width / 2) : ([(width / 2), (width / 2) - 1].sort_by { (point.x - _1).abs }.first)
     closest_mid_y = height.odd? ? (height / 2) : ([(height / 2), (height / 2) - 1].sort_by { (point.y - _1).abs }.first)
 
-    mahattan_distance(point, Point[closest_mid_x, closest_mid_y])
+    manhattan_distance(point, Point[closest_mid_x, closest_mid_y])
+  end
+
+  # @return Array<Coords>
+  def area(x_range, y_range)
+    coords = []
+    x_range.each do |x|
+      y_range.each do |y|
+        coords << "#{x} #{y}"
+      end
+    end
+
+    coords
   end
 
   # Useful for finding longest rows in a grid
@@ -230,8 +272,35 @@ class Grid
     end
   end
 
+  # As in navigable neighbors # use #n8 to get just cell-geometry level data
   def neighbors(point)
     structure[point]
+  end
+
+  # assumes no out-of bounds per width*height cells are present
+  # @return Array<String> # array of points
+  def n4(point)
+    NEIGHBORS.filter_map do |delta|
+      new_x = point.x + delta[0]
+      new_y = point.y + delta[1]
+      n = "#{new_x} #{new_y}"
+
+      next if cell_outside_norms?(n)
+      n
+    end
+  end
+
+  # assumes no out-of bounds per width*height cells are present
+  # @return Array<String> # array of points
+  def n8(point)
+    N8.filter_map do |delta|
+      new_x = point.x + delta[0]
+      new_y = point.y + delta[1]
+      n = "#{new_x} #{new_y}"
+
+      next if cell_outside_norms?(n)
+      n
+    end
   end
 
   # Returns cells that are specified distance away from a given cell. Useful for telling
@@ -306,7 +375,7 @@ class Grid
     def expand_layer(queue, visited, other_visited, structure)
       current_node = queue.shift
 
-      structure[current_node].sort_by { |neighbor| mahattan_distance_from_mid(neighbor) }.each do |neighbor|
+      structure[current_node].sort_by { |neighbor| manhattan_distance_from_mid(neighbor) }.each do |neighbor|
         next if visited.key?(neighbor)
 
         visited[neighbor] = current_node

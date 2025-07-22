@@ -1,6 +1,7 @@
 require "bundler/setup"
 require "codinbot"
 require "pry"
+require "benchmark"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

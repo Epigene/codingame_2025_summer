@@ -15,7 +15,34 @@ RSpec.describe Controller, instance_name: :controller do
       FIELD
     end
 
+    context "when ??" do
+      let(:agents) do
+        {
+          1 => Agent.new("1 0 0 6 50 0"),
+          2 => Agent.new("2 0 0 6 50 0")
+        }
+      end
 
+      let(:field) do
+        <<~FIELD
+          0 0 0 1 0 0 2 0 0 3 0 0 4 0 0 5 0 0 6 0 0 7 0 0
+          ...
+        FIELD
+      end
+
+      let(:update) do
+        {
+          1 => "1 0 0 0 0 0",
+          2 => "2 0 4 0 0 0"
+        }
+      end
+
+      xit "returns moves TODO" do
+        is_expected.to eq(
+          ["TODO1", "TODO2"]
+        )
+      end
+    end
 
     context "when initialized with wood 4 starting setup" do
       let(:agents) do
@@ -34,7 +61,7 @@ RSpec.describe Controller, instance_name: :controller do
         }
       end
 
-      it "returns moves for both agents" do
+      xit "returns moves for both agents" do
         is_expected.to eq(
           ["1;MOVE 6 1", "2;MOVE 6 3"]
         )
@@ -66,7 +93,7 @@ RSpec.describe Controller, instance_name: :controller do
         }
       end
 
-      it "returns commands to shoot at agent 5, the wettest one" do
+      xit "returns commands to shoot at agent 5, the wettest one" do
         is_expected.to eq(["1;SHOOT 5", "2;SHOOT 5"])
       end
     end

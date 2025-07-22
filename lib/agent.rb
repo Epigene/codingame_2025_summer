@@ -32,4 +32,8 @@ class Agent
   def y
     xy.y
   end
+
+  def range
+    optimal_range
+  end
 end

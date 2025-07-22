@@ -1,5 +1,5 @@
 class Controller
-  attr_reader :my_id, :agents, :field, :cells, :turn
+  attr_reader :my_id, :agents, :grid, :cells, :turn
 
   # @param my_id Integer
   # @param agents Hash<Agent>
@@ -8,7 +8,7 @@ class Controller
     @turn = 0
     @my_id = my_id
     @agents = agents
-    init_field(field)
+    init_grid(field)
   end
 
   # @return Array<String>
@@ -21,7 +21,18 @@ class Controller
 
     my_agents.map do |agent|
       if opp_agents.any?
-        "#{agent.id};SHOOT #{opp_agents_by_wetness.first.id}"
+        if (opps = in_opp_range(agent.xy)).any?
+          nearby_cover =
+            grid.neighbors(agent.xy).find { |ne| cells[ne].cover_from[opps.first.xy] == 2 } ||
+            grid.neighbors(agent.xy).find { |ne| cells[ne].cover_from[opps.first.xy] == 1 }
+
+          agents_in_range = opp_agents_in_range(agent.xy, agent.range)
+          target = opp_agents_by_cover(agent.xy).select { |opp| agents_in_range.include?(opp) }.first
+
+          "#{agent.id}; MOVE #{nearby_cover}; SHOOT #{target.id}"
+        else # nobody can shoot me, do other stuff
+          "#{agent.id}; SHOOT #{opp_agents_by_wetness.first.id}; MESSAGE I'm untouchable!"
+        end
       else
         "#{agent.id};HUNKER_DOWN"
       end
@@ -51,6 +62,25 @@ class Controller
     opp_agents_by_wetness[turn] ||= opp_agents.sort_by { |agent| -agent.wetness }
   end
 
+  # exposed first
+  def opp_agents_by_cover(from_xy)
+    opp_agents.sort_by { |agent| cells[agent.xy].cover_from[from_xy].to_i }
+  end
+
+  # Flipside of #opp_agents_in_range
+  # @return Array<Agent>
+  def in_opp_range(xy)
+    opp_agents.select { grid.manhattan_distance(xy, _1.xy) <= _1.optimal_range }
+  end
+
+  # Flipside of #in_opp_range
+  # @return Array<Agent>
+  def opp_agents_in_range(of_xy, range)
+    opp_agents.select { grid.manhattan_distance(of_xy, _1.xy) <= range }
+  end
+
+  ## Deep setup below ##
+
   def set_agent_data!
     agent_update.transform_values! do |line|
       agent_id, x, y, cd, bombs, wetness = line.split.map { |x| x.to_i }
@@ -72,8 +102,8 @@ class Controller
     nil
   end
 
-  # sets @field and @cells
-  def init_field(field)
+  # sets @grid and @cells
+  def init_grid(field)
     lines = field.split("\n")
     grid = Grid.new(_width = lines.first.split.size / 3, _height = lines.size)
     @cells = {}
@@ -82,15 +112,21 @@ class Controller
       inputs = line.split
 
       inputs.each_slice(3) do |x, y, cover_height|
-        @cells["#{x} #{y}"] = cover_height.to_i
+        cells["#{x} #{y}"] = Cell.new(xy: "#{x} #{y}", cover: cover_height.to_i, grid: grid)
         grid.add_cell("#{x} #{y}") if cover_height.to_i.zero?
       end
     end
 
-    @cells.each_pair do |point, cover_height|
-      grid.remove_cells([point]) unless cover_height.zero?
+    cells.each_pair do |point, cell|
+      grid.n4(point).each do |neighbor|
+        next if cells[neighbor].cover.zero?
+
+        cells[point].add_cover_from(neighbor, cells[neighbor].cover)
+      end
+
+      grid.remove_cells([point]) unless cell.cover.zero?
     end
 
-    @field = grid
+    @grid = grid
   end
 end
