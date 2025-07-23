@@ -1,5 +1,7 @@
 class Controller
-  attr_reader :my_id, :agents, :grid, :cells, :turn
+  BOMB_RANGE = 4
+  MINIMUM_CLUSTER_SIZE = 5 # 7 is better because ensures full 3x3 coverāž
+  attr_reader :my_id, :agents, :grid, :cells, :turn, :opp_clusers
 
   # @param my_id Integer
   # @param agents Hash<Agent>
@@ -18,23 +20,41 @@ class Controller
     @my_agent_count = my_agent_count
 
     set_agent_data!
+    set_opp_clusers!
 
     my_agents.map do |agent|
       if opp_agents.any?
-        if (opps = in_opp_range(agent.xy)).any?
-          nearby_cover =
-            grid.neighbors(agent.xy).find { |ne| cells[ne].cover_from[opps.first.xy] == 2 } ||
-            grid.neighbors(agent.xy).find { |ne| cells[ne].cover_from[opps.first.xy] == 1 }
+        if agent.id == 1 && agent.bombs.positive? && opp_clusers.any? # && # IF I CAN NADE A CLUSER
+          clusters = opp_clusers.sort_by { |xy, opps| [grid.manhattan_distance(xy, agent.xy), -opps] }
+          debug clusters
+          closest_cluster = clusters.first.first
+          distance = grid.manhattan_distance(closest_cluster, agent.xy)
 
-          agents_in_range = opp_agents_in_range(agent.xy, agent.range)
-          target = opp_agents_by_cover(agent.xy).select { |opp| agents_in_range.include?(opp) }.first
+          if distance <= BOMB_RANGE
+            "#{agent.id}; THROW #{closest_cluster}"
+          elsif distance == BOMB_RANGE + 1
+            "#{agent.id}; MOVE #{closest_cluster}; THROW #{closest_cluster}"
+          else # move towards
+            "#{agent.id}; MOVE #{closest_cluster}"
+          end
+        else
+          "#{agent.id}; HUNKER_DOWN"
+        #== ˇ Old good logic below, enable in bronze ˇ
 
-          "#{agent.id}; MOVE #{nearby_cover}; SHOOT #{target.id}"
-        else # nobody can shoot me, do other stuff
-          "#{agent.id}; SHOOT #{opp_agents_by_wetness.first.id}; MESSAGE I'm untouchable!"
+        # elsif (opps = in_opp_range(agent.xy)).any?
+        #   nearby_cover =
+        #     grid.neighbors(agent.xy).find { |ne| cells[ne].cover_from[opps.first.xy] == 2 } ||
+        #     grid.neighbors(agent.xy).find { |ne| cells[ne].cover_from[opps.first.xy] == 1 }
+
+        #   agents_in_range = opp_agents_in_range(agent.xy, agent.range)
+        #   target = opp_agents_by_cover(agent.xy).select { |opp| agents_in_range.include?(opp) }.first
+
+        #   "#{agent.id}; MOVE #{nearby_cover}; SHOOT #{target.id}"
+        # else # nobody can shoot me, do other stuff
+        #   "#{agent.id}; SHOOT #{opp_agents_by_wetness.first.id}; MESSAGE I'm untouchable!"
         end
       else
-        "#{agent.id};HUNKER_DOWN"
+        "#{agent.id}; HUNKER_DOWN"
       end
     end
 
@@ -128,5 +148,59 @@ class Controller
     end
 
     @grid = grid
+  end
+
+  # sets @opp_clusers
+  def set_opp_clusers!
+    clusters = {}
+    agent_coords = my_agents.map { _1.xy }.to_set
+    opp_agent_coords = opp_agents.map { _1.xy }.to_set
+    claimed = {}
+    candidates = []
+
+    # First pass: gather all 3x3 clusters with counts
+    (0..(grid.max_x - 2)).each do |i|
+      (0..(grid.max_y - 2)).each do |j|
+        cells = []
+        count = 0
+        blocked = false
+
+        (i..i + 2).each do |x|
+          (j..j + 2).each do |y|
+            xy = "#{x} #{y}"
+            cells << xy
+
+            if agent_coords.include?(xy)
+              blocked = true
+              break
+            end
+
+            count += 1 if opp_agent_coords.include?(xy)
+          end
+          break if blocked
+        end
+
+        next if blocked
+        next if count < MINIMUM_CLUSTER_SIZE
+
+        candidates << { center: "#{i + 1} #{j + 1}", count: count, cells: cells }
+      end
+    end
+
+    # Second pass: sort by descending count and pick non-overlapping clusters
+    candidates.sort_by! { |c| -c[:count] }
+
+    candidates.each do |cand|
+      # Skip if any cell is already claimed
+      next if cand[:cells].any? { |xy| claimed[xy].to_i > cand[:count] }
+
+      # Accept this cluster
+      clusters[cand[:center]] = cand[:count]
+
+      # Mark all its cells as claimed
+      cand[:cells].each { |xy| claimed[xy] = cand[:count] }
+    end
+
+    @opp_clusers = clusters
   end
 end
